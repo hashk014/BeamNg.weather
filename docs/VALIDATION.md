@@ -25,4 +25,3 @@ rendu, les performances, les collisions, le comportement en habitacle,
 l'apparition du panneau dans l'éditeur UI et l'absence d'erreurs en jeu.
 Les tests sur moteur simulé ne valident pas les bindings C++ ou le rendu GPU.
 La liste de test détaillée se trouve dans le README.
-

@@ -122,4 +122,3 @@ Les structures et API ont également été inspectées en lecture seule dans les
 scripts et archives de l'installation locale 0.40.1.0, notamment
 `core/modmanager.lua`, `core/camera.lua`, `core/environment.lua`,
 `editor/createObjectTool.lua`, l'app `Winds` et les précipitations de Jungle Rock Island.
-

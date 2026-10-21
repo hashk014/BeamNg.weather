@@ -53,4 +53,3 @@ function rainObjectCount()
   return count
 end
 startScene()
-

@@ -23,4 +23,3 @@ scope.form.intensity = NaN;
 scope.apply();
 assert.match(commands.pop(), /intensity=0.65/);
 console.log('UI bridge: state, toggle, bounds and command escaping passed');
-

@@ -45,4 +45,3 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
     }
   };
 });
-

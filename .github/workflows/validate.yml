@@ -23,4 +23,3 @@ jobs:
           path: |
             dist/beamng_weather_hashk014.zip
             dist/SHA256SUMS.txt
-
