@@ -20,7 +20,7 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
       var prefix = 'extensions.beamngWeather_hashk014';
       var labels = {waiting: 'Load a map to see the rain.', raining: 'Raining', stopped: 'Rain stopped', unavailable: 'Rain unavailable: see the diagnostic below.'};
       var qualityNames = ['low', 'medium', 'high', 'ultra'];
-      var booleanFields = ['collisions', 'wind', 'lighting'];
+      var booleanFields = ['collisions', 'wind', 'lighting', 'glassDrops', 'cabinProtection'];
       scope.weather = null;
       scope.form = {};
       scope.edit = {key: null};
@@ -44,6 +44,10 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
       scope.choiceKey = function (event) {
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); scope.openChoice = null; }
       };
+      scope.glassControls = [
+        {key:'glassAmount',label:'Window droplet amount',min:0,max:2,step:0.05,unit:'factor'},
+        {key:'glassScale',label:'Window droplet size',min:0.5,max:2,step:0.05,unit:'factor'}
+      ];
       scope.controls = [
         {key: 'intensity', label: 'Intensity', min: 0, max: 1, step: 0.01, unit: 'percent'},
         {key: 'dropScale', label: 'Droplet size', min: 0.5, max: 2, step: 0.05, unit: 'factor'},
@@ -63,7 +67,7 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
         scope.$evalAsync(function () {
           scope.weather = state;
           scope.statusText = labels[state.status] || state.status;
-          scope.controls.forEach(function (control) {
+          scope.controls.concat(scope.glassControls).forEach(function (control) {
             if (scope.edit.key !== control.key) scope.form[control.key] = state[control.key];
           });
           booleanFields.concat(['quality', 'cloudMode', 'cloudCoverage']).forEach(function (key) { scope.form[key] = state[key]; });
@@ -79,7 +83,7 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
       };
       scope.apply = function (key) {
         var payload = {};
-        var control = scope.controls.filter(function (item) { return item.key === key; })[0];
+        var control = scope.controls.concat(scope.glassControls).filter(function (item) { return item.key === key; })[0];
         if (control) {
           var value = Number(scope.form[key]);
           if (!isFinite(value)) return;

@@ -43,12 +43,24 @@
           </div>
           <p class="bw-hint">{{ state.activeDrops.toLocaleString('en-US') }} active droplets / {{ state.maxDrops.toLocaleString('en-US') }} max.</p>
           <p class="bw-hint">Increasing coverage spreads the same droplets over a larger volume.</p>
+          <p class="bw-hint">Native rain coverage profile: {{ state.rainCoverage?.source || 'Mod fallback' }}.</p>
         </div>
         <div class="bw-checks">
           <label><input v-model="form.collisions" type="checkbox" @change="apply('collisions')">Collide with scenery and vehicles</label>
           <label><input v-model="form.wind" type="checkbox" @change="apply('wind')">Follow the map's existing wind</label>
           <label><input v-model="form.lighting" type="checkbox" @change="apply('lighting')">Match droplets to sky lighting</label>
         </div>
+      </section>
+      <section class="bw-section" aria-label="Vehicle windows">
+        <h2>Vehicle windows</h2>
+        <div class="bw-checks">
+          <label><input v-model="form.cabinProtection" type="checkbox" @change="apply('cabinProtection')">Keep airborne rain outside the cabin</label>
+          <label><input v-model="form.glassDrops" type="checkbox" @change="apply('glassDrops')">Enable droplets on detected exterior windows</label>
+        </div>
+        <div class="bw-sliders"><label v-for="control in glassControls" :key="control.key" class="bw-slider"><span>{{ control.label }}</span><output>{{ format(control) }}</output><input v-model.number="form[control.key]" type="range" :min="control.min" :max="control.max" :step="control.step" :aria-label="control.label" @focus="editingKey = control.key" @blur="editingKey = null" @change="apply(control.key)"></label></div>
+        <p class="bw-hint">{{ state.vehicleRain?.panels || 0 }} detected window meshes / {{ state.vehicleRain?.glassDrops || 0 }} surface droplets. Movement follows vehicle velocity. Escape pauses the simulation.</p>
+        <p class="bw-hint">Cabin protection uses a conservative envelope near the active vehicle. Disable it for open-top vehicles. Glass damage and moving windows are experimental.</p>
+        <p v-if="state.vehicleRain?.warning" class="bw-error" role="status">{{ state.vehicleRain.warning }}</p>
       </section>
       <section class="bw-section" aria-label="Custom presets">
         <h2>My presets</h2>
@@ -61,7 +73,7 @@
       </section>
       <p v-if="state.error" class="bw-error" role="alert">{{ state.error }}</p>
     </template>
-    <footer>Settings are saved automatically. Visual rain only: no windshield effects, puddles or grip changes.</footer>
+    <footer>Settings are saved automatically. Visual rain and window droplets. No puddles or grip changes.</footer>
   </section>
 </template>
 
@@ -77,6 +89,10 @@ export default {
     const form = reactive({})
     const error = ref("")
     const editingKey = ref(null)
+    const glassControls = [
+      { key: "glassAmount", label: "Window droplet amount", min: 0, max: 2, step: 0.05, unit: "factor" },
+      { key: "glassScale", label: "Window droplet size", min: 0.5, max: 2, step: 0.05, unit: "factor" }
+    ]
     const openChoice = ref(null)
     const choices = {
       cloudMode: [{ value: "auto", label: "Follow rain intensity" }, { value: "manual", label: "Manual cloud cover" }, { value: "map", label: "Keep map settings" }],
@@ -102,8 +118,8 @@ export default {
       if (disposed || !data || typeof data !== "object") return
       state.value = data
       error.value = ""
-      for (const control of controls) if (editingKey.value !== control.key) form[control.key] = data[control.key]
-      for (const key of ["quality", "collisions", "wind", "lighting", "cloudMode", "cloudCoverage"]) if (editingKey.value !== key) form[key] = data[key]
+      for (const control of [...controls, ...glassControls]) if (editingKey.value !== control.key) form[control.key] = data[control.key]
+      for (const key of ["quality", "collisions", "wind", "lighting", "cloudMode", "cloudCoverage", "glassDrops", "cabinProtection"]) if (editingKey.value !== key) form[key] = data[key]
     }
     async function request(method, value = null) {
       let timer
@@ -132,7 +148,7 @@ export default {
       return apply(key)
     }
     function apply(key) {
-      const control = controls.find(item => item.key === key)
+      const control = [...controls, ...glassControls].find(item => item.key === key)
       if (control) {
         const value = Number(form[key])
         if (!Number.isFinite(value)) return
@@ -141,7 +157,7 @@ export default {
       if (key === "quality" && ["low", "medium", "high", "ultra"].includes(form.quality)) return send("configure", { quality: form.quality })
       if (key === "cloudMode" && ["auto", "manual", "map"].includes(form.cloudMode)) return send("configure", { cloudMode: form.cloudMode })
       if (key === "cloudCoverage" && Number.isFinite(Number(form.cloudCoverage))) return send("configure", { cloudCoverage: Math.max(0, Math.min(1, Number(form.cloudCoverage))) })
-      if (["collisions", "wind", "lighting"].includes(key)) return send("configure", { [key]: !!form[key] })
+      if (["collisions", "wind", "lighting", "glassDrops", "cabinProtection"].includes(key)) return send("configure", { [key]: !!form[key] })
     }
     function toggle() { if (state.value) return send("setEnabled", !state.value.enabled) }
     function selectPreset(id) { if (state.value?.presets?.some(p => p.id === id)) return send("applyPreset", id) }
@@ -159,7 +175,7 @@ export default {
     onMounted(refresh)
     // useEvents removes its listener automatically when this component unmounts.
     onUnmounted(() => { disposed = true })
-    return { state, form, error, editingKey, openChoice, choices, choiceLabel, toggleChoice, choose, controls, statusText, presetDescription, refresh, apply, toggle, selectPreset, saveSlot, loadSlot, deleteSlot, format }
+    return { state, form, error, editingKey, openChoice, choices, choiceLabel, toggleChoice, choose, controls, glassControls, statusText, presetDescription, refresh, apply, toggle, selectPreset, saveSlot, loadSlot, deleteSlot, format }
   }
 }
 </script>

@@ -79,8 +79,8 @@ class RainTests(unittest.TestCase):
           assert(registry.beamngWeather_hashk014_fine.position == cameraPosition)
           assert(registry.beamngWeather_hashk014_fine.followCam)
           assert(registry.mapRain.numDrops == 7)
-          assert(registry.beamngWeather_hashk014_shader_v2.DXVertexShaderFile == "shaders/beamng_weather_hashk014/rainV.hlsl")
-          assert(registry.beamngWeather_hashk014_shader_v2.DXPixelShaderFile == "shaders/beamng_weather_hashk014/rainP.hlsl")
+          assert(registry.beamngWeather_hashk014_shader_v3.DXVertexShaderFile == "shaders/beamng_weather_hashk014/rainV.hlsl")
+          assert(registry.beamngWeather_hashk014_shader_v3.DXPixelShaderFile == "shaders/beamng_weather_hashk014/rainP.hlsl")
           extension.onUpdate(10)
           assert(rainObjectCount() == 3)
         ''')
@@ -306,6 +306,47 @@ class RainTests(unittest.TestCase):
           assert(not extension.uiRequest("loadPersonalPreset", 3).ok)
           assert(not extension.uiRequest("onExtensionUnloaded").ok)
           assert(extension.uiRequest("getState").ok)
+        ''')
+
+    def test_vehicle_renderer_budget_guard_and_mission_cleanup(self):
+        self.run_lua((ROOT / "tests/vehicle_stub.lua").read_text(encoding="utf-8"))
+        self.run_lua('''
+          extension.configure({quality="low",intensity=1,transition=0,variability=0})
+          for i=1,30 do extension.onUpdate(0.05,0.05) end
+          local state=extension.getState()
+          assert(state.vehicleRain.available and state.vehicleRain.guardRadius>0)
+          assert(registry.beamngWeather_hashk014_fine.fadeDist<0)
+          local native=registry.beamngWeather_hashk014_fine.numDrops+registry.beamngWeather_hashk014_body.numDrops+registry.beamngWeather_hashk014_distant.numDrops
+          assert(native+state.vehicleRain.reservedDrops==state.activeDrops)
+          assert(state.activeDrops<=state.maxDrops)
+          extension.onClientEndMission()
+          extension.onUpdate(1,1)
+          assert(not registry.beamngWeather_hashk014_surfaces and rainObjectCount()==0)
+          extension.onClientStartMission();extension.onUpdate(1,1)
+          extension.onSerialize()
+          assert(not registry.beamngWeather_hashk014_surfaces)
+        ''')
+
+    def test_native_f11_coverage_profile_is_used_without_mutating_map_object(self):
+        self.run_lua('''
+          local native={registered=true,class="Precipitation",boxWidth=16,boxHeight=10,fadeDist=5,fadeDistEnd=10,numDrops=0,dataBlock="rain_medium"}
+          native.getClassName=function(self) return self.class end
+          registry.rain_coverage=native
+          extension.configure({volume=1,transition=0})
+          local state=extension.getState()
+          assert(state.rainCoverage.available and state.rainCoverage.source=="rain_coverage")
+          local obj=registry.beamngWeather_hashk014_distant
+          assert(obj.boxWidth==16 and obj.boxHeight==10 and obj.fadeDist==5 and obj.fadeDistEnd==10)
+          extension.onUpdate(1,1)
+          assert(obj.fadeDist==5 and obj.fadeDistEnd==10)
+          extension.applyPreset("shower")
+          assert(native.numDrops==0 and native.dataBlock=="rain_medium" and native.boxWidth==16)
+          registry.rain_coverage=nil
+          extension.configure({volume=1})
+          assert(not extension.getState().rainCoverage.available)
+          assert(obj.boxWidth==48 and obj.boxHeight==26)
+          extension.onExtensionUnloaded()
+          assert(native.numDrops==0)
         ''')
 
     def test_native_cloud_modes_and_restoration(self):

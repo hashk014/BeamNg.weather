@@ -2,7 +2,7 @@
   "name": "BeamNg.weather",
   "description": "Rain studio: five presets, custom profiles and detailed atmospheric rain controls.",
   "author": "hashk014",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "domElement": "<beamng-weather-hashk014></beamng-weather-hashk014>",
   "directive": "beamngWeatherHashk014",
   "types": ["ui.apps.categories.info"],

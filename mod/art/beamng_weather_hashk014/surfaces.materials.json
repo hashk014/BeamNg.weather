@@ -1,0 +1,16 @@
+{
+  "beamngWeather_hashk014_glassDrops": {
+    "name": "beamngWeather_hashk014_glassDrops", "class": "Material",
+    "mapTo": "beamngWeather_hashk014_glassDrops", "version": 1.5,
+    "Stages": [{"baseColorMap": "art/beamng_weather_hashk014/glass_drop.color.png", "normalMap": "art/beamng_weather_hashk014/glass_drop.normal.png", "baseColorFactor": [0.85, 0.91, 1, 0.7], "roughnessFactor": 0.06, "metallicFactor": 0}],
+    "translucent": true, "translucentBlendOp": "LerpAlpha", "translucentZWrite": false,
+    "doubleSided": true, "castShadows": false
+  },
+  "beamngWeather_hashk014_nearRain": {
+    "name": "beamngWeather_hashk014_nearRain", "class": "Material",
+    "mapTo": "beamngWeather_hashk014_nearRain", "version": 1.5,
+    "Stages": [{"baseColorMap": "art/beamng_weather_hashk014/rain_body.color.dds", "baseColorFactor": [0.9, 0.94, 1, 0.7], "emissiveFactor": [0.12, 0.14, 0.16]}],
+    "translucent": true, "translucentBlendOp": "LerpAlpha", "translucentZWrite": false,
+    "doubleSided": true, "castShadows": false
+  }
+}

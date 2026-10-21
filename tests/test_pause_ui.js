@@ -10,6 +10,7 @@ const state = {
   enabled: true, status: 'raining', preset: 'shower', intensity: 0.72, dropScale: 1,
   fallSpeed: 1.05, turbulence: 0.15, variability: 0.2, contrast: 0.95, volume: 1,
   cloudMode: 'auto', cloudCoverage: 0.85, clouds: {available:true,coverage:0.944,nativeCoverage:2.832},
+  glassAmount:1, glassScale:1, glassDrops:true, cabinProtection:true, vehicleRain:{available:true,panels:5,glassDrops:120},
   transition: 1.5, quality: 'medium', collisions: true, wind: true, lighting: true,
   activeDrops: 4320, maxDrops: 6000, presets: [{id:'shower',name:'Shower',description:'Rain shower'}],
   personalPresets: [{slot:1,saved:false},{slot:2,saved:false},{slot:3,saved:false}]
@@ -97,6 +98,11 @@ const ui = context.component.setup();
   assert.match(source, /v-if="openChoice === 'quality'"/);
   ui.form.cloudMode='manual'; await ui.apply('cloudMode'); assert.equal(calls.pop().value.cloudMode,'manual');
   ui.form.cloudCoverage=2; await ui.apply('cloudCoverage'); assert.equal(calls.pop().value.cloudCoverage,1);
+  assert.equal(ui.glassControls.length,2);
+  ui.form.glassAmount=4; await ui.apply('glassAmount'); assert.equal(calls.pop().value.glassAmount,2);
+  ui.form.glassScale=-2; await ui.apply('glassScale'); assert.equal(calls.pop().value.glassScale,0.5);
+  ui.form.glassDrops=false; await ui.apply('glassDrops'); assert.equal(calls.pop().value.glassDrops,false);
+  ui.form.cabinProtection=false; await ui.apply('cabinProtection'); assert.equal(calls.pop().value.cabinProtection,false);
   fail=true; await ui.refresh(); assert.match(ui.error.value, /offline/);
   await ui.toggle(); assert.match(ui.error.value, /offline/);
   fail=false; await ui.refresh(); assert.equal(ui.error.value, '');

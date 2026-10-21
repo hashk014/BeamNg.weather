@@ -56,6 +56,8 @@ function createObject(class)
   nextID = nextID + 1
   local obj = {class = class, children = {}, id = nextID}
   function obj:getID() return self.id end
+  function obj:getClassName() return self.class end
+  function obj:setHidden(value) self.hidden = value end
   function obj:postApply() self.applies = (self.applies or 0) + 1 end
   function obj:setField(key, index, value) self[key] = value end
   function obj:registerObject(name)

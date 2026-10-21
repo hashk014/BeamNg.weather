@@ -19,6 +19,7 @@
         <div class="bweather-choice-options" role="group" aria-label="Particle budget options" ng-if="openChoice === 'quality'"><button type="button" ng-repeat="option in choices.quality" ng-click="choose('quality', option.value)" aria-pressed="{{form.quality === option.value}}" ng-class="{'is-active': form.quality === option.value}">{{option.label}}</button></div>
       </div>
       <p class="bweather-budget">{{weather.activeDrops | number:0}} active droplets / {{weather.maxDrops | number:0}} max.</p>
+      <p class="bweather-hint">Native rain coverage profile: {{weather.rainCoverage.source || 'Mod fallback'}}.</p>
     </section>
     <button class="bweather-disclosure" type="button" ng-click="advanced = !advanced" aria-expanded="{{advanced}}">Advanced settings <span aria-hidden="true">{{advanced ? '−' : '+'}}</span></button>
     <section class="bweather-section" ng-if="advanced" aria-label="Advanced settings">
@@ -37,6 +38,14 @@
       <label class="bweather-slider" ng-if="form.cloudMode === 'manual'">Cloud cover<output>{{form.cloudCoverage * 100 | number:0}}%</output><input type="range" min="0" max="1" step="0.01" ng-model="form.cloudCoverage" ng-change="apply('cloudCoverage')" aria-label="Cloud cover"></label>
       <p class="bweather-hint">Automatic mode uses 80–100% of the native cloud range. Stopping rain restores the previous sky.</p>
       <p class="bweather-error" ng-if="weather.clouds.warning">{{weather.clouds.warning}}</p>
+    </section>
+    <section class="bweather-section" aria-label="Vehicle windows">
+      <h2>Vehicle windows</h2>
+      <label class="bweather-check"><input type="checkbox" ng-model="form.cabinProtection" ng-change="apply('cabinProtection')">Keep rain outside the cabin</label>
+      <label class="bweather-check"><input type="checkbox" ng-model="form.glassDrops" ng-change="apply('glassDrops')">Droplets on exterior windows</label>
+      <label class="bweather-slider" ng-repeat="c in glassControls"><span>{{c.label}}</span><output>{{format(c)}}</output><input type="range" beamng-weather-range min="{{c.min}}" max="{{c.max}}" step="{{c.step}}" ng-model="form[c.key]" ng-focus="edit.key = c.key" ng-blur="endEdit()" ng-change="apply(c.key)" aria-label="{{c.label}}"></label>
+      <p class="bweather-hint">{{weather.vehicleRain.panels || 0}} window meshes / {{weather.vehicleRain.glassDrops || 0}} droplets. Escape pauses the simulation. Disable cabin protection for open-top vehicles.</p>
+      <p class="bweather-error" ng-if="weather.vehicleRain.warning">{{weather.vehicleRain.warning}}</p>
     </section>
     <section class="bweather-section bweather-personal" aria-label="Custom presets">
       <h2>My presets</h2>

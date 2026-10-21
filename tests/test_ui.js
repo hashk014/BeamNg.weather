@@ -63,4 +63,6 @@ let stopped=false, prevented=false;
 scope.choiceKey({key:'Escape',stopPropagation(){stopped=true},preventDefault(){prevented=true}});
 assert.equal(scope.openChoice,null); assert.ok(stopped && prevented);
 assert.doesNotMatch(fs.readFileSync('mod/ui/modules/apps/BeamngWeatherHashk014/app.html','utf8'), /<select\b/);
+scope.form.glassScale=99; scope.apply('glassScale'); assert.equal(payloads.pop().glassScale,2); commands.pop();
+scope.form.cabinProtection=false; scope.apply('cabinProtection'); assert.equal(payloads.pop().cabinProtection,false); commands.pop();
 console.log('UI: presets, slots, bounds, serialization and slider editing passed');

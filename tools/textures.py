@@ -4,6 +4,8 @@ import argparse
 import math
 import random
 import struct
+from io import BytesIO
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "mod/art/beamng_weather_hashk014"
@@ -74,12 +76,42 @@ def atlas(seed, opacity, width_scale, length_scale):
     return dds(size, size, pixels)
 
 
+def glass_texture(normal=False):
+    # Sixteen lifetime frames: bead with a shaded rim, a highlight and a normal dome.
+    size, cell = 256, 64
+    image = Image.new("RGBA", (size, size), (128, 128, 255, 0) if normal else (0, 0, 0, 0))
+    pixels = image.load()
+    for frame in range(16):
+        fade = min(1, (16-frame)/4)
+        for y in range(cell):
+            for x in range(cell):
+                dx, dy = (x+0.5-cell/2)/(cell*0.42), (y+0.5-cell/2)/(cell*0.42)
+                r2 = dx*dx+dy*dy
+                if r2 >= 1:
+                    continue
+                z = math.sqrt(1-r2)
+                edge = min(1, (1-r2)*16)
+                if normal:
+                    rgba = (round(128+dx*100), round(128-dy*100), round(128+z*127), 255)
+                else:
+                    highlight = math.exp(-((dx+0.35)**2+(dy+0.42)**2)/0.025)
+                    rim = math.exp(-((math.sqrt(r2)-0.87)/0.09)**2)
+                    value = round(110+100*highlight+40*rim)
+                    rgba = (value, min(255,value+10), min(255,value+18), round((18+100*rim+120*highlight)*edge*fade))
+                pixels[(frame%4)*cell+x, (frame//4)*cell+y] = rgba
+    result = BytesIO()
+    image.save(result, format="PNG", optimize=False)
+    return result.getvalue()
+
+
 def outputs():
     return {
         "rain_fine.color.dds": atlas(1401, 102, 0.8, 0.7),
         "rain_body.color.dds": atlas(1402, 142, 1, 1.1),
         "rain_distant.color.dds": atlas(1403, 83, 0.9, 0.95),
         "rain_empty.color.dds": dds(4, 4, bytes(4*4*4)),
+        "glass_drop.color.png": glass_texture(),
+        "glass_drop.normal.png": glass_texture(normal=True),
     }
 
 

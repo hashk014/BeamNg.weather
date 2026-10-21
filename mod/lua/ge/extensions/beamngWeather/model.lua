@@ -1,6 +1,6 @@
 -- Visual settings only; this module never changes vehicle or world physics.
 local M = {}
-M.version = "0.4.1"
+M.version = "0.5.0"
 -- BeamNG 0.40's native environment panel uses 0..3, not 0..1.
 M.cloudCoverageMax = 3
 M.budgets = {low = 2400, medium = 6000, high = 12000, ultra = 20000}
@@ -8,10 +8,10 @@ M.ranges = {
   intensity = {0, 1, 0.65}, dropScale = {0.5, 2, 1}, fallSpeed = {0.4, 1.8, 1},
   turbulence = {0, 1, 0.12}, variability = {0, 0.6, 0.16},
   volume = {0.65, 1.6, 1}, contrast = {0.35, 1.5, 0.9}, transition = {0, 5, 1.5},
-  cloudCoverage = {0, 1, 0.85}
+  cloudCoverage = {0, 1, 0.85}, glassAmount = {0, 2, 1}, glassScale = {0.5, 2, 1}
 }
-local booleans = {enabled = true, collisions = true, wind = true, lighting = true}
-local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting", "cloudMode", "cloudCoverage"}
+local booleans = {enabled = true, collisions = true, wind = true, lighting = true, cabinProtection = true, glassDrops = true}
+local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting", "cloudMode", "cloudCoverage", "glassAmount", "glassScale", "glassDrops", "cabinProtection"}
 M.presets = {
   {id = "drizzle", name = "Drizzle", description = "Fine droplets with a gentle fall", intensity = 0.26, dropScale = 0.65, fallSpeed = 0.65, turbulence = 0.08, variability = 0.09, contrast = 0.65, volume = 0.85, wind = true, lighting = true},
   {id = "gentle", name = "Light rain", description = "Steady, subtle rainfall", intensity = 0.46, dropScale = 0.85, fallSpeed = 0.85, turbulence = 0.08, variability = 0.12, contrast = 0.8, volume = 1, wind = true, lighting = true},
@@ -25,7 +25,7 @@ function M.copy(data)
   return result
 end
 function M.defaults()
-  local result = {schemaVersion = 3, quality = "medium", preset = "custom", cloudMode = "auto"}
+  local result = {schemaVersion = 4, quality = "medium", preset = "custom", cloudMode = "auto"}
   for k, spec in pairs(M.ranges) do result[k] = spec[3] end
   for k, v in pairs(booleans) do result[k] = v end
   return result

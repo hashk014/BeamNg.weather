@@ -3,6 +3,8 @@ local M = {}
 M.dependencies = {"ui_pause_actions", "core_environment"}
 local model = require("ge/extensions/beamngWeather/model")
 local clouds = require("ge/extensions/beamngWeather/clouds")
+local vehicleRain = require("ge/extensions/beamngWeather/vehicleRain")
+local coverage = require("ge/extensions/beamngWeather/coverage")
 local tag = "beamngWeather_hashk014"
 local groupName = tag .. "_runtime"
 local configPath = "settings/beamngWeather_hashk014.json"
@@ -37,17 +39,21 @@ local function getState()
   data.maxDrops, data.activeDrops = model.budgets[config.quality], activeDrops
   data.presets, data.personalPresets = model.presets, {}
   data.clouds = clouds.getState()
+  data.vehicleRain = vehicleRain.getState()
+  data.rainCoverage = coverage.getState()
   for i = 1, 3 do data.personalPresets[i] = {slot = i, saved = personal[tostring(i)] ~= nil} end
   return data
 end
 local function requestState() guihooks.trigger("BeamngWeatherHashk014State", getState()) end
 
 local function setLayerParameters(obj, spec)
+  if spec.id == "distant" then spec = coverage.profile(spec) end
   obj.boxWidth, obj.boxHeight = spec.width * config.volume, spec.height * config.volume
   obj.dropSize = spec.size * config.dropScale
   obj.minSpeed, obj.maxSpeed = spec.minSpeed * config.fallSpeed, spec.maxSpeed * config.fallSpeed
   obj.minMass, obj.maxMass = spec.mass, spec.mass * 1.45
-  obj.fadeDist, obj.fadeDistEnd = spec.fade * config.volume, spec.fadeEnd * config.volume
+  local guard = vehicleRain.getState().guardRadius
+  obj.fadeDist, obj.fadeDistEnd = guard > 0 and -guard or spec.fade * config.volume, spec.fadeEnd * config.volume
   obj.useWind, obj.useLighting = config.wind, config.lighting
   obj.useTurbulence = config.turbulence > 0
   obj.maxTurbulence, obj.turbulenceSpeed = 0.15 * config.turbulence, 0.12 + 0.18 * config.turbulence
@@ -77,7 +83,7 @@ end
 local function createRain()
   -- Without a precipitation shader, the native fallback ignores lighting and
   -- distance fading. Use original standalone shaders without legacy macros.
-  if not scenetree.findObject(tag .. "_shader_v2") then
+  if not scenetree.findObject(tag .. "_shader_v3") then
     local shader = createObject("ShaderData")
     if not shader then error("Cannot create rain shader") end
     shader.canSave = false
@@ -85,7 +91,7 @@ local function createRain()
     shader.DXPixelShaderFile = "shaders/beamng_weather_hashk014/rainP.hlsl"
     shader.pixVersion = 5
     shader:setField("samplerNames", 0, "$diffuseMap")
-    shader:registerObject(tag .. "_shader_v2")
+    shader:registerObject(tag .. "_shader_v3")
     if not live(shader) then error("Cannot register rain shader") end
   end
   local missing = false
@@ -110,16 +116,24 @@ local function createRain()
 end
 local function updateCounts()
   local counts, total = model.counts(config, currentIntensity, clock)
+  local reserve = math.min(total, vehicleRain.getState().reservedDrops)
+  if reserve > 0 then
+    local rest = total - reserve
+    counts = {math.floor(rest * 0.3), math.floor(rest * 0.5), rest - math.floor(rest * 0.3) - math.floor(rest * 0.5)}
+  end
   for i, obj in ipairs(layers) do if obj.numDrops ~= counts[i] then obj.numDrops = counts[i] end end
   activeDrops = total
 end
 local function reconcile(updateParameters)
   if not inMission() then
+    coverage.clear()
+    vehicleRain.clear()
     clouds.release()
     cleanup(); currentIntensity, status, lastError = 0, "waiting", nil
     return
   end
   if not config.enabled or config.intensity == 0 then
+    vehicleRain.clear()
     clouds.release()
     cleanup(); currentIntensity, status, lastError = 0, "stopped", nil
     return
@@ -177,6 +191,15 @@ end
 local function onUpdate(dtReal, dtSim)
   local real = math.max(0, dtReal or 0)
   local dt = math.max(0, dtSim == nil and real or dtSim)
+  if inMission() then vehicleRain.update(config, dt, currentIntensity) else vehicleRain.clear() end
+  if layers then
+    local guard = vehicleRain.getState().guardRadius
+    for i, obj in ipairs(layers) do
+      local fade = definitions[i].fade
+      if definitions[i].id == "distant" then fade = coverage.getState().fade or fade end
+      if live(obj) then obj.fadeDist = guard > 0 and -guard or fade * config.volume end
+    end
+  end
   clock, healthTimer, visualTimer = clock + dt, healthTimer + real, visualTimer + dt
   if healthTimer >= 1 then healthTimer = 0; reconcile(false); requestState() end
   if status ~= "raining" or not layers then return end
@@ -214,6 +237,8 @@ local function onExtensionLoaded()
   log("I", tag, "BeamNg.weather " .. model.version .. " loaded")
 end
 local function onClientEndMission()
+  coverage.clear()
+  vehicleRain.clear()
   suspended = true
   clouds.release()
   cleanup(); currentIntensity, status, lastError = 0, "waiting", nil
@@ -226,13 +251,18 @@ M.setEnabled = function(value) configure({enabled = value}) end
 M.setIntensity = function(value) configure({intensity = value}) end
 M.onUpdate, M.onExtensionLoaded = onUpdate, onExtensionLoaded
 M.onExtensionUnloaded = function()
+  coverage.clear()
+  vehicleRain.clear()
   clouds.release()
   cleanup()
   ui_pause_actions.unregisterModButton(tag)
 end
 M.onClientStartMission = function() suspended = false; healthTimer = 0 end
 M.onClientEndMission = onClientEndMission
-M.onSerialize = function() clouds.release(); cleanup(); return {config = model.copy(config), personalPresets = personal} end
+M.onSerialize = function() vehicleRain.clear(); clouds.release(); cleanup(); return {config = model.copy(config), personalPresets = personal} end
+M.onVehicleResetted = function(id) vehicleRain.invalidate(id) end
+M.onVehicleDestroyed = function(id) vehicleRain.invalidate(id) end
+M.onVehicleSpawned = function(id) vehicleRain.invalidate(id) end
 M.onDeserialized = function(data)
   if type(data) == "table" then
     model.normalize(config, data.config)

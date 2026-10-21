@@ -1,70 +1,61 @@
-# Validation: 0.4.1 experimental release
+# Validation: 0.5.0 experimental release
 
 Date: October 21, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
 
-## Confirmed problems and corrections
+## Evidence and completed checks
 
-Version 0.3.0: the installed Vue bridge exposes a static signature registry. The previous page
-accessed a mod namespace that was absent from that registry, causing requests to
-fail before reaching Lua. Its earlier mock incorrectly supplied that namespace.
-The new page uses `run()` from `@/bridge/libs/Lua.js` and a restricted `uiRequest`
-endpoint that returns an acknowledgement plus the applied state.
+- **36 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 35 portable tests and
+  skips the installed-game pause-actions integration. Both Node UI checks pass.
+- Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
+  failure recovery, pause registration, texture and deterministic archive checks.
+- Nine new synthetic tests exercise the actual vehicle-effect modules using the
+  native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
+  interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
+  exclusion of near drops from the cabin; static shelter; pause; toggles; reset;
+  asynchronous mesh timeout; corrupt-data fallback; camera distance; pose tracking;
+  world-space near particles; PNG alpha fading and normal variation.
+- Native F11 `rain_coverage` objects were inspected read-only in the installed Jungle Rock Island, Small Island and East Coast level archives; West Coast has `WCA_rain`. They are `Precipitation` volumes, not a separate vehicle-occlusion API. The mod inherits volume dimensions/fade for its owned ambient layer and falls back elsewhere. A regression test checks profile use, fallback and preservation of the source object.
+- Main-controller integration verifies native shader guarding, the shared airborne
+  budget, and cleanup through mission end and serialization with vehicle effects.
+- GPU mesh calls were checked against the installed game's `util/export.lua`:
+  `GPUMesh.bng_getGPUMesh`, `dataIsReady`, `verticesGet`, `indicesGet`,
+  `flexmeshes`, `primitivesGet` and `free`. These are read-only snapshots.
+- ProceduralMesh format/collision disabling checked in the installed game's
+  `editor/toolUtilities/meshPart.lua`; pose and quaternion APIs checked in core
+  scripts. Vertex/normal/UV face indices are verified by the synthetic boundary.
+- Native guard constants reuse the renderer's fade fields. Both revised HLSL
+  stages compile with Windows SDK FXC (SM5) and DXC (SM6). This is offline
+  compilation, not proof of runtime shader bindings or rendering.
+- Original four BC3 DDS and two glass PNG textures regenerate identically.
+  Independent image decoding checks alpha, atlas variants, mipmaps and normals.
+- Vue settings page rendered in a browser using the installed game's Vue build,
+  with simulated state. New glass/cabin controls checked through the visible UI.
+- ZIP entries use safe relative paths, match source exactly and are reproducible.
 
-Read-only inspection of the user's existing game log also found DDS header
-rejections and failures compiling the deprecated precipitation shader macros.
-The package now uses BC3 DDS and original standalone HLSL. These repairs were
-validated offline; a new in-game log has not yet been generated for this release.
+## Native behavior still awaiting gameplay validation
 
-Version 0.4.0 limited coverage to 1. The installed game's
-`environmentControls/components/envPanels/EnvWeather.vue` configures its cloud
-slider with minimum 0 and maximum **3**. The revised controller maps manual
-0–100% to 0–3 and uses 2.4–3 automatically. Tests check all built-in presets,
-manual zero/midpoint/maximum, UI normalization and restoration.
+The game has not been controlled for this update. Tests do **not** establish
+that the native GPU snapshot coordinates, PBR transparency/normal maps, quaternion
+pose attachment, camera guard and dynamic mesh uploads render correctly in the
+actual game. Confirm all of them on real stock cars before treating this as a
+verified cabin/window feature. Actual FPS, DirectX/Vulkan differences and damage
+behavior are unmeasured.
 
-Native popup selects were reported to fail inside the game UI. They have been
-replaced in both interfaces by inline expandable option lists; no browser popup
-is involved. Controller tests verify opening, closing, selection, invalid options,
-and keeping a list open when periodic state arrives.
+Cabin protection is a conservative glass-derived envelope, active near the player
+vehicle with a 12 m camera guard. It can remove some air outside the actual cabin.
+Turn it off for open-top vehicles. The implementation does not model each opening
+or update flexbody deformation continuously. Damage/opening windows may require
+reset, and unconventional mesh names or combined body meshes may not be supported.
+Window water is normal-mapped bead geometry, not full optical refraction; wipers
+are not implemented. New arrivals stop under static shelter, while existing beads
+run off. Collision sampling and exposure are approximate and map-dependent.
 
-## Completed checks
+If scanning/render-mesh creation fails, the effect reports a diagnostic and leaves
+native airborne rain unmasked. This fallback cannot guarantee a dry cabin.
+The UI's **Raining** status confirms requested objects/counts, not rendered output.
+Close Escape to run the simulation. Use the detailed test checklist in the README.
 
-- 25 local Python/LuaJIT 2.1 (Lua 5.1) tests cover lifecycle, presets, persistence,
-  migration, budgets, pause registration, request acknowledgements and errors,
-  cloud modes, multiple cloud layers, restoration, external edits, locked modes,
-  missing layers, map changes, DDS decoding and reproducible packaging.
-- One test executes the installed `ui/pause/actions.lua` with a mocked engine.
-  CI skips this installed-game check and runs 24 portable tests.
-- Node checks cover both UI controllers. The pause test supplies **no mod entry**
-  in the static signature registry. When the installed game is available, it runs
-  the actual generic `bridge/libs/Lua.js` implementation against a mock engine API.
-  Portable CI validates the generic endpoint contract with a mock.
-- The actual Vue component renders using the game's Vue browser build in a local
-  preview. Preset selection and automatic/manual cloud controls were checked
-  through the visible interface with simulated game state. Inline cloud and
-  budget lists were opened and options selected. Both interfaces were checked
-  with the game's Vue 3 / AngularJS 1.5.8 browser builds.
-- The cloud controller uses the installed game's exported `getCloudCoverByID`,
-  `setCloudCoverByID` and `canChange` APIs. It changes coverage only on existing
-  native `CloudLayer` objects. C++ execution remains untested.
-- All four procedural BC3 DDS files regenerate identically. Pillow independently
-  decodes the compressed atlases; checks cover alpha, 16 variants and full mipmaps.
-- Original vertex/pixel shaders compile offline with the Windows SDK DirectX
-  Shader Compiler. This establishes HLSL validity, not engine resource bindings
-  or final rendered output.
-- ZIP paths are safe, installable contents match source exactly, and repeated
-  builds produce the same archive and SHA-256 checksum.
+![Vehicle controls with simulated state, outside BeamNG](images/vehicle-settings-preview.png)
 
-![Classic pause page with simulated game state, outside BeamNG](images/pause-settings-preview.png)
-
-![Expanded cloud options in the simulated preview, outside BeamNG](images/cloud-options-preview.png)
-
-## Still requires in-game testing
-
-The game has not been controlled for this update. Confirm preset changes through
-Esc > Mods, native cloud appearance and restoration, rain texture loading,
-shader bindings under the active renderer, collisions, map switching and FPS.
-The **Raining** status means effect objects were created; it does not prove their
-rendered output. Test Gridmap v2 and West Coast USA, then inspect `beamng.log`.
-
-No windshield effects, puddles, friction, grip, wet materials or surface splashes
-are implemented. See the README for installation and the gameplay checklist.
+No road wetness, puddles, grip/friction changes, ground splashes or rain audio are
+implemented. No original vehicle assets or game scripts are overwritten.

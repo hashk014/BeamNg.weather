@@ -1,0 +1,164 @@
+"""Synthetic 3D integration, using the native GPU/mesh API shapes; no GPU rendering."""
+import unittest
+from pathlib import Path
+from lupa.luajit21 import LuaRuntime
+from PIL import Image
+
+ROOT=Path(__file__).resolve().parents[1]
+LUA=ROOT/'mod/lua'
+
+
+class VehicleRainTests(unittest.TestCase):
+    def setUp(self):
+        self.lua=LuaRuntime(unpack_returned_tuples=True)
+        self.lua.globals().moduleRoot=LUA.as_posix()
+        self.lua.execute('package.path=moduleRoot.."/?.lua;"..package.path')
+        self.lua.execute((ROOT/'tests/engine_stub.lua').read_text(encoding='utf-8'))
+        self.lua.execute((ROOT/'tests/vehicle_stub.lua').read_text(encoding='utf-8'))
+        self.lua.execute('''
+          g=require("ge/extensions/beamngWeather/surfaceMath")
+          effects=require("ge/extensions/beamngWeather/vehicleRain")
+          config=require("ge/extensions/beamngWeather/model").defaults()
+          config.quality="low"; config.intensity=1; config.transition=0
+          function advance(n) for i=1,n do effects.update(config,0.05,1) end end
+        ''')
+
+    def run_lua(self,code):
+        self.lua.execute(code)
+
+    def test_gpu_detection_all_panes_excludes_interior_and_lamps_and_frees_snapshot(self):
+        self.run_lua('''
+          advance(40)
+          local state=effects.getState()
+          assert(state.available and state.panels==5 and not state.warning)
+          assert(not g.glassName("pickup_wipers","glass_invisible"))
+          assert(not g.glassName("pickup_glass_trim","pickup_glass"))
+          assert(state.glassDrops>0 and state.guardRadius>0 and scans==1 and freed==1)
+          advance(140)
+          for _,name in ipairs({"test_windshield","test_backlight","test_window_left","test_window_right","test_sunroof"}) do
+            assert(effects.getState().wetPanels[name] and effects.getState().wetPanels[name]>0,name)
+          end
+          assert(scans==1 and freed==1)
+        ''')
+
+    def test_near_particles_exclude_cabin_and_do_not_change_physics(self):
+        self.run_lua('''
+          advance(30)
+          local state=effects.getState()
+          assert(state.nearDrops>0 and state.reservedDrops<=300)
+          local part=registry.beamngWeather_hashk014_nearDrops.mesh
+          local box={lo=g.v(-1,-1,0.35),hi=g.v(1,1,2)}
+          for i=1,#part.verts,4 do
+            local center=g.mul(g.add(g.add(part.verts[i],part.verts[i+1]),g.add(part.verts[i+2],part.verts[i+3])),0.25)
+            assert(not g.contains(center,box,0.09))
+          end
+          assert(registry.beamngWeather_hashk014_nearDrops.collisionType=="None")
+          assert(registry.beamngWeather_hashk014_glassDrops.collisionType=="None")
+          assert(vehicle.velocity.y==0 and registry.mapRain.numDrops==7)
+        ''')
+
+    def test_tunnel_stops_new_glass_drops_and_near_air_rain(self):
+        self.run_lua('''
+          roof=true; advance(50)
+          local state=effects.getState()
+          assert(state.available and state.glassDrops==0)
+          local function noRainBelowRoof()
+            local part=registry.beamngWeather_hashk014_nearDrops.mesh
+            if part then
+              for i=1,#part.verts,4 do
+                local z=(part.verts[i].z+part.verts[i+1].z+part.verts[i+2].z+part.verts[i+3].z)/4
+                assert(z>4)
+              end
+            end
+          end
+          noRainBelowRoof()
+          roof=false;advance(50)
+          assert(effects.getState().glassDrops>0 and effects.getState().nearDrops>0)
+          roof=true;advance(360)
+          assert(effects.getState().glassDrops==0)
+          noRainBelowRoof()
+        ''')
+
+    def test_speed_direction_changes_impact_flux_and_surface_flow(self):
+        self.run_lua('''
+          local front,back=g.v(0,1,0),g.v(0,-1,0)
+          local forward,reverse=g.v(0,-25,-9),g.v(0,25,-9)
+          assert(g.flux(front,forward)>g.flux(back,forward))
+          assert(g.flux(back,reverse)>g.flux(front,reverse))
+          local side=g.v(1,0,0)
+          local a=g.flow(side,g.v(0,0,-9.81),forward,0.003)
+          local b=g.flow(side,g.v(0,0,-9.81),reverse,0.003)
+          assert(a.y<0 and b.y>0 and a.z<0 and b.z<0)
+          local stationary=g.flow(side,g.v(0,0,-9.81),g.v(),0.003)
+          assert(g.length(a)>g.length(stationary))
+        ''')
+
+    def test_pause_switches_and_cleanup(self):
+        self.run_lua('''
+          advance(30)
+          local before=effects.getState().glassDrops
+          for i=1,20 do effects.update(config,0,1) end
+          assert(effects.getState().glassDrops==before)
+          config.glassDrops=false;advance(1)
+          assert(effects.getState().glassDrops==0 and effects.getState().guardRadius>0)
+          config.cabinProtection=false;advance(1)
+          assert(effects.getState().guardRadius==0 and not registry.beamngWeather_hashk014_surfaces)
+          config.glassDrops=true;config.cabinProtection=true;advance(2)
+          effects.invalidate(vehicle:getID())
+          assert(not registry.beamngWeather_hashk014_surfaces)
+          advance(2);assert(effects.getState().available)
+          config.enabled=false;advance(1)
+          assert(effects.getState().guardRadius==0 and not registry.beamngWeather_hashk014_surfaces)
+        ''')
+
+    def test_async_snapshot_timeout_and_bad_mesh_leave_native_rain_unmasked(self):
+        self.run_lua('''
+          meshReady=false;advance(110)
+          assert(effects.getState().warning and effects.getState().guardRadius==0)
+          assert(freed>=1)
+          effects.clear();meshReady=true
+          local old=GPUMesh.bng_getGPUMesh
+          GPUMesh.bng_getGPUMesh=function() local m=old();m.verticesGet=function() error("injected failure") end;return m end
+          advance(10)
+          assert(effects.getState().warning:find("failed") and effects.getState().guardRadius==0)
+          assert(freed==scans)
+        ''')
+
+    def test_camera_teleport_disables_guard_and_rebuilds_when_returning(self):
+        self.run_lua('''
+          advance(2);assert(effects.getState().guardRadius>0)
+          cameraPosition=g.v(200,200,10);advance(1)
+          assert(effects.getState().guardRadius==0 and not registry.beamngWeather_hashk014_surfaces)
+          cameraPosition=g.v(10,20,1.5);advance(2)
+          assert(effects.getState().guardRadius>0 and registry.beamngWeather_hashk014_surfaces)
+          effects.clear();assert(freed==scans)
+        ''')
+
+    def test_glass_follows_pose_between_mesh_updates_while_air_stays_in_world_space(self):
+        self.run_lua('''
+          advance(20)
+          local glass=registry.beamngWeather_hashk014_glassDrops
+          local air=registry.beamngWeather_hashk014_nearDrops
+          local oldAirX=air.position.x
+          local builds=glass.builds
+          vehicle.pos=g.v(11,20,0);cameraPosition=g.v(11,20,1.5)
+          effects.update(config,0,1)
+          assert(glass.position.x==11 and glass.builds==builds)
+          assert(air.position.x==oldAirX)
+          local frame=g.frame(g.v(1,0,0),g.v(0,0,1))
+          local p=g.v(2,3,4)
+          assert(g.length(g.sub(g.localVector(g.worldVector(p,frame),frame),p))<0.00001)
+        ''')
+
+    def test_window_assets_have_alpha_fade_and_normal_variation(self):
+        folder=ROOT/'mod/art/beamng_weather_hashk014'
+        with Image.open(folder/'glass_drop.color.png') as im:
+            self.assertEqual(im.size,(256,256))
+            self.assertGreater(im.getchannel('A').getextrema()[1],100)
+            self.assertLess(im.crop((192,192,256,256)).getchannel('A').getextrema()[1],im.crop((0,0,64,64)).getchannel('A').getextrema()[1])
+        with Image.open(folder/'glass_drop.normal.png') as im:
+            self.assertGreater(im.getchannel('R').getextrema()[1]-im.getchannel('R').getextrema()[0],150)
+
+
+if __name__=='__main__':
+    unittest.main()
