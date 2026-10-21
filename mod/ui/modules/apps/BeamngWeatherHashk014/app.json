@@ -1,0 +1,15 @@
+{
+  "name": "BeamNg.weather",
+  "description": "Rain controls: intensity, quality and collisions for BeamNG.drive 0.40.",
+  "author": "hashk014",
+  "version": "0.1.0",
+  "domElement": "<beamng-weather-hashk014></beamng-weather-hashk014>",
+  "directive": "beamngWeatherHashk014",
+  "types": ["ui.apps.categories.info"],
+  "category": "General",
+  "isAuxiliary": false,
+  "interactive": "yes",
+  "preserveAspectRatio": false,
+  "css": {"width": "310px", "height": "300px", "min-width": "270px", "min-height": "290px", "top": "150px", "left": "40px"}
+}
+

@@ -1,0 +1,13 @@
+<div class="bngApp bweather-panel">
+  <link rel="stylesheet" href="/ui/modules/apps/BeamngWeatherHashk014/app.css">
+  <header><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 27a8 8 0 0 1 1-16 12 12 0 0 1 23 3 7 7 0 1 1 3 13H10Z"/><path d="m15 33-3 7m13-7-3 7m13-7-3 7"/></svg><div><strong>BeamNg.weather</strong><span>Pluie / 0.40</span></div></header>
+  <p class="bweather-status" role="status">{{weather ? statusText : 'Connexion au mod…'}}</p>
+  <div class="bweather-controls" ng-if="weather">
+    <button type="button" class="bweather-toggle" ng-click="toggle()" ng-class="{'is-on': weather.enabled}" aria-pressed="{{weather.enabled}}">{{weather.enabled ? 'Arrêter la pluie' : 'Activer la pluie'}}</button>
+    <label class="bweather-intensity">Intensité <output>{{form.intensity}} %</output><input type="range" min="0" max="100" step="1" ng-model="form.intensity" ng-focus="editing = true" ng-blur="editing = false" ng-change="apply()" ng-model-options="{debounce: 180}" aria-label="Intensité de la pluie"></label>
+    <label class="bweather-quality">Qualité<select ng-model="form.quality" ng-change="apply()" aria-label="Qualité de la pluie"><option value="low">Légère</option><option value="medium">Équilibrée</option><option value="high">Dense</option></select></label>
+    <label class="bweather-collision"><input type="checkbox" ng-model="form.collisions" ng-change="apply()">Collisions avec le décor</label>
+  </div>
+  <footer>Pluie visuelle. Adhérence inchangée.</footer>
+</div>
+
