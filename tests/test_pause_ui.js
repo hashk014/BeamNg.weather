@@ -9,7 +9,7 @@ let fail = false;
 const state = {
   enabled: true, status: 'raining', preset: 'shower', intensity: 0.72, dropScale: 1,
   fallSpeed: 1.05, turbulence: 0.15, variability: 0.2, contrast: 0.95, volume: 1,
-  cloudMode: 'auto', cloudCoverage: 0.85, clouds: {available:true,coverage:0.888},
+  cloudMode: 'auto', cloudCoverage: 0.85, clouds: {available:true,coverage:0.944,nativeCoverage:2.832},
   transition: 1.5, quality: 'medium', collisions: true, wind: true, lighting: true,
   activeDrops: 4320, maxDrops: 6000, presets: [{id:'shower',name:'Shower',description:'Rain shower'}],
   personalPresets: [{slot:1,saved:false},{slot:2,saved:false},{slot:3,saved:false}]
@@ -79,6 +79,22 @@ const ui = context.component.setup();
   assert.equal(ui.form.intensity, 0.9);
   ui.editingKey.value=null; handlers.BeamngWeatherHashk014State(state);
   assert.equal(ui.format(ui.controls[0]), '72%');
+  assert.equal(ui.choiceLabel('quality'), 'Balanced / 6,000');
+  ui.toggleChoice('cloudMode'); assert.equal(ui.openChoice.value,'cloudMode');
+  // Periodic state updates must leave the visible choice list open.
+  handlers.BeamngWeatherHashk014State(state);
+  assert.equal(ui.openChoice.value,'cloudMode');
+  ui.toggleChoice('quality'); assert.equal(ui.openChoice.value,'quality');
+  await ui.choose('quality','ultra'); assert.equal(calls.pop().value.quality,'ultra');
+  assert.equal(ui.openChoice.value,null);
+  ui.toggleChoice('quality'); ui.toggleChoice('quality'); assert.equal(ui.openChoice.value,null);
+  await ui.choose('cloudMode','manual'); assert.equal(calls.pop().value.cloudMode,'manual');
+  await ui.choose('quality','invalid'); await ui.choose('unknown','manual'); ui.toggleChoice('unknown');
+  assert.equal(calls.length,0);
+  assert.equal(ui.openChoice.value,null);
+  assert.doesNotMatch(source, /<select\b/, 'Pause controls must not use native popup selects');
+  assert.match(source, /v-if="openChoice === 'cloudMode'"/);
+  assert.match(source, /v-if="openChoice === 'quality'"/);
   ui.form.cloudMode='manual'; await ui.apply('cloudMode'); assert.equal(calls.pop().value.cloudMode,'manual');
   ui.form.cloudCoverage=2; await ui.apply('cloudCoverage'); assert.equal(calls.pop().value.cloudCoverage,1);
   fail=true; await ui.refresh(); assert.match(ui.error.value, /offline/);

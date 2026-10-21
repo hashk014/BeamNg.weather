@@ -311,10 +311,10 @@ class RainTests(unittest.TestCase):
     def test_native_cloud_modes_and_restoration(self):
         self.run_lua('''
           extension.onUpdate(1)
-          assert(math.abs(registry.mapClouds.coverage-(0.6+0.4*extension.getState().intensity))<0.0001)
+          assert(math.abs(registry.mapClouds.coverage-(2.4+0.6*extension.getState().intensity))<0.0001)
           assert(registry.mapClouds.windSpeed==4)
           extension.configure({cloudMode="manual", cloudCoverage=0.45})
-          assert(registry.mapClouds.coverage==0.45)
+          assert(math.abs(registry.mapClouds.coverage-1.35)<0.0001)
           extension.configure({cloudMode="map"})
           assert(registry.mapClouds.coverage==0.2)
           extension.configure({cloudMode="auto"})
@@ -328,6 +328,27 @@ class RainTests(unittest.TestCase):
           assert(registry.mapClouds.coverage==0.2)
           extension.onUpdate(1)
           extension.onExtensionUnloaded()
+          assert(registry.mapClouds.coverage==0.2)
+        ''')
+
+    def test_clouds_use_full_native_range_with_normalized_ui_values(self):
+        self.run_lua('''
+          for _, preset in ipairs(extension.getState().presets) do
+            extension.applyPreset(preset.id)
+            local state=extension.getState()
+            assert(registry.mapClouds.coverage>=2.4 and registry.mapClouds.coverage<=3)
+            assert(math.abs(state.clouds.coverage*3-state.clouds.nativeCoverage)<0.0001)
+            assert(state.clouds.coverage>=0.8 and state.clouds.coverage<=1)
+          end
+          extension.applyPreset("downpour")
+          assert(registry.mapClouds.coverage==3)
+          extension.configure({cloudMode="manual",cloudCoverage=0})
+          assert(registry.mapClouds.coverage==0)
+          extension.configure({cloudCoverage=0.5})
+          assert(registry.mapClouds.coverage==1.5)
+          extension.configure({cloudCoverage=999})
+          assert(registry.mapClouds.coverage==3 and extension.getState().cloudCoverage==1)
+          extension.setEnabled(false)
           assert(registry.mapClouds.coverage==0.2)
         ''')
 
@@ -359,12 +380,12 @@ class RainTests(unittest.TestCase):
           local extra=createObject("CloudLayer")
           extra.coverage=0.4; extra:registerObject("extraClouds")
           extension.configure({cloudMode="manual",cloudCoverage=0.9})
-          assert(extra.coverage==0.9 and extension.getState().clouds.count==2)
+          assert(math.abs(extra.coverage-2.7)<0.0001 and extension.getState().clouds.count==2)
           extension.savePersonalPreset(1)
           extension.configure({cloudMode="map"})
           assert(extra.coverage==0.4)
           extension.loadPersonalPreset(1)
-          assert(extension.getState().cloudMode=="manual" and extra.coverage==0.9)
+          assert(extension.getState().cloudMode=="manual" and math.abs(extra.coverage-2.7)<0.0001)
           extension.onClientEndMission()
           assert(extra.coverage==0.4 and registry.mapClouds.coverage==0.2)
           mission="levels/other/main.level.json"

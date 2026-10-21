@@ -25,6 +25,25 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
       scope.form = {};
       scope.edit = {key: null};
       scope.advanced = false;
+      scope.openChoice = null;
+      scope.choices = {
+        quality: [{value:'low',label:'Low / 2,400'},{value:'medium',label:'Balanced / 6,000'},{value:'high',label:'High / 12,000'},{value:'ultra',label:'Ultra / 20,000'}],
+        cloudMode: [{value:'auto',label:'Follow rain intensity'},{value:'manual',label:'Manual cloud cover'},{value:'map',label:'Keep map settings'}]
+      };
+      scope.choiceLabel = function (key) {
+        var selected = (scope.choices[key] || []).filter(function (option) { return option.value === scope.form[key]; })[0];
+        return selected ? selected.label : 'Choose an option';
+      };
+      scope.toggleChoice = function (key) { if (scope.choices[key]) scope.openChoice = scope.openChoice === key ? null : key; };
+      scope.choose = function (key, value) {
+        if (!(scope.choices[key] || []).some(function (option) { return option.value === value; })) return;
+        scope.form[key] = value;
+        scope.openChoice = null;
+        scope.apply(key);
+      };
+      scope.choiceKey = function (event) {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); scope.openChoice = null; }
+      };
       scope.controls = [
         {key: 'intensity', label: 'Intensity', min: 0, max: 1, step: 0.01, unit: 'percent'},
         {key: 'dropScale', label: 'Droplet size', min: 0.5, max: 2, step: 0.05, unit: 'factor'},

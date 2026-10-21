@@ -36,7 +36,7 @@ function M.update(config)
     state.warning = "Cloud changes are locked by the current game mode."
     return
   end
-  state = {available = false, count = 0, coverage = target}
+  state = {available = false, count = 0, coverage = target / model.cloudCoverageMax, nativeCoverage = target}
   for _, name in ipairs(scenetree.findClassObjects("CloudLayer") or {}) do
     local object = scenetree.findObject(name)
     if object and simObjectExists(object) then

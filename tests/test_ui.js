@@ -49,4 +49,18 @@ assert.equal(scope.form.intensity, 0.9, 'Incoming state must not move the slider
 scope.endEdit(); receive();
 assert.equal(scope.form.intensity, 0.65);
 assert.equal(scope.format(scope.controls[0]), '65%');
+assert.match(commands.pop(), /requestState/);
+scope.toggleChoice('quality'); assert.equal(scope.openChoice,'quality');
+receive(); assert.equal(scope.openChoice,'quality');
+scope.toggleChoice('cloudMode'); assert.equal(scope.openChoice,'cloudMode');
+scope.choose('cloudMode','manual'); assert.equal(scope.openChoice,null);
+assert.equal(payloads.pop().cloudMode,'manual'); commands.pop();
+scope.choose('quality','ultra'); assert.equal(payloads.pop().quality,'ultra'); commands.pop();
+scope.choose('quality','invalid'); scope.choose('unknown','manual');
+assert.equal(commands.length,0);
+scope.toggleChoice('quality');
+let stopped=false, prevented=false;
+scope.choiceKey({key:'Escape',stopPropagation(){stopped=true},preventDefault(){prevented=true}});
+assert.equal(scope.openChoice,null); assert.ok(stopped && prevented);
+assert.doesNotMatch(fs.readFileSync('mod/ui/modules/apps/BeamngWeatherHashk014/app.html','utf8'), /<select\b/);
 console.log('UI: presets, slots, bounds, serialization and slider editing passed');

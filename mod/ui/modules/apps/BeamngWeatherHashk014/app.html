@@ -14,7 +14,10 @@
     </section>
     <section class="bweather-section" aria-label="Rain settings">
       <label class="bweather-slider" ng-repeat="c in controls | limitTo:3"><span>{{c.label}}</span><output>{{format(c)}}</output><input type="range" beamng-weather-range min="{{c.min}}" max="{{c.max}}" step="{{c.step}}" ng-model="form[c.key]" ng-focus="edit.key = c.key" ng-blur="endEdit()" ng-change="apply(c.key)" ng-model-options="{debounce: 120}" aria-label="{{c.label}}"></label>
-      <label class="bweather-quality">Particle budget<select ng-model="form.quality" ng-change="apply('quality')"><option value="low">Low / 2,400</option><option value="medium">Balanced / 6,000</option><option value="high">High / 12,000</option><option value="ultra">Ultra / 20,000</option></select></label>
+      <div class="bweather-choice" ng-keydown="choiceKey($event)">
+        <span>Particle budget</span><button type="button" aria-label="Particle budget: {{choiceLabel('quality')}}" aria-expanded="{{openChoice === 'quality'}}" ng-click="toggleChoice('quality')">{{choiceLabel('quality')}} <span aria-hidden="true">{{openChoice === 'quality' ? '−' : '+'}}</span></button>
+        <div class="bweather-choice-options" role="group" aria-label="Particle budget options" ng-if="openChoice === 'quality'"><button type="button" ng-repeat="option in choices.quality" ng-click="choose('quality', option.value)" aria-pressed="{{form.quality === option.value}}" ng-class="{'is-active': form.quality === option.value}">{{option.label}}</button></div>
+      </div>
       <p class="bweather-budget">{{weather.activeDrops | number:0}} active droplets / {{weather.maxDrops | number:0}} max.</p>
     </section>
     <button class="bweather-disclosure" type="button" ng-click="advanced = !advanced" aria-expanded="{{advanced}}">Advanced settings <span aria-hidden="true">{{advanced ? '−' : '+'}}</span></button>
@@ -27,9 +30,12 @@
     </section>
     <section class="bweather-section" aria-label="Native clouds">
       <h2>Native clouds</h2>
-      <label class="bweather-quality">Cloud control<select ng-model="form.cloudMode" ng-change="apply('cloudMode')"><option value="auto">Follow rain intensity</option><option value="manual">Manual cloud cover</option><option value="map">Keep map settings</option></select></label>
+      <div class="bweather-choice" ng-keydown="choiceKey($event)">
+        <span>Cloud control</span><button type="button" aria-label="Cloud control: {{choiceLabel('cloudMode')}}" aria-expanded="{{openChoice === 'cloudMode'}}" ng-click="toggleChoice('cloudMode')">{{choiceLabel('cloudMode')}} <span aria-hidden="true">{{openChoice === 'cloudMode' ? '−' : '+'}}</span></button>
+        <div class="bweather-choice-options" role="group" aria-label="Cloud control options" ng-if="openChoice === 'cloudMode'"><button type="button" ng-repeat="option in choices.cloudMode" ng-click="choose('cloudMode', option.value)" aria-pressed="{{form.cloudMode === option.value}}" ng-class="{'is-active': form.cloudMode === option.value}">{{option.label}}</button></div>
+      </div>
       <label class="bweather-slider" ng-if="form.cloudMode === 'manual'">Cloud cover<output>{{form.cloudCoverage * 100 | number:0}}%</output><input type="range" min="0" max="1" step="0.01" ng-model="form.cloudCoverage" ng-change="apply('cloudCoverage')" aria-label="Cloud cover"></label>
-      <p class="bweather-hint">Stopping rain restores the previous sky.</p>
+      <p class="bweather-hint">Automatic mode uses 80–100% of the native cloud range. Stopping rain restores the previous sky.</p>
       <p class="bweather-error" ng-if="weather.clouds.warning">{{weather.clouds.warning}}</p>
     </section>
     <section class="bweather-section bweather-personal" aria-label="Custom presets">

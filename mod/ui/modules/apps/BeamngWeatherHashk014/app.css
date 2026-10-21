@@ -36,3 +36,10 @@
 .bweather-panel footer{padding-top:13px;color:var(--bw-muted);font-size:10px}
 .bweather-panel .bweather-error{color:#ffcead;font-size:11px;overflow-wrap:anywhere}
 .bweather-panel button:focus-visible,.bweather-panel input:focus-visible,.bweather-panel select:focus-visible{outline:2px solid #ffffff;outline-offset:3px}
+
+.bweather-panel .bweather-choice{display:flex;flex-direction:column;gap:7px;font-size:12px}
+.bweather-panel .bweather-choice>button{text-align:left;width:100%}
+.bweather-panel .bweather-choice>button span{float:right}
+.bweather-panel .bweather-choice-options{display:flex;flex-direction:column;gap:4px;padding:6px;border:1px solid var(--bw-edge);background:#242424}
+.bweather-panel .bweather-choice-options button{text-align:left}
+.bweather-panel .bweather-choice-options .is-active{background:var(--bw-rain);color:#202020}

@@ -24,15 +24,23 @@
       <section class="bw-section bw-sliders" aria-label="Native clouds">
         <div>
           <h2>Native clouds</h2>
-          <label class="bw-quality">Cloud control<select v-model="form.cloudMode" @change="apply('cloudMode')"><option value="auto">Follow rain intensity</option><option value="manual">Manual cloud cover</option><option value="map">Keep map settings</option></select></label>
-          <p class="bw-hint">Automatic mode brings cloud cover from 60% to 100% as rain increases. Stopping rain restores the previous sky.</p>
+          <div class="bw-choice" @keydown.esc.stop.prevent="openChoice = null">
+            <span id="bw-cloud-label">Cloud control</span>
+            <button type="button" aria-labelledby="bw-cloud-label bw-cloud-value" aria-controls="bw-cloud-options" :aria-expanded="openChoice === 'cloudMode'" @click="toggleChoice('cloudMode')"><span id="bw-cloud-value">{{ choiceLabel('cloudMode') }}</span><span aria-hidden="true">{{ openChoice === 'cloudMode' ? '−' : '+' }}</span></button>
+            <div v-if="openChoice === 'cloudMode'" id="bw-cloud-options" class="bw-choice-options" role="group" aria-label="Cloud control options"><button v-for="option in choices.cloudMode" :key="option.value" type="button" :aria-pressed="form.cloudMode === option.value" :class="{ 'is-selected': form.cloudMode === option.value }" @click="choose('cloudMode', option.value)">{{ option.label }}</button></div>
+          </div>
+          <p class="bw-hint">Automatic mode uses 80–100% of the native cloud range for a heavily covered sky. Stopping rain restores the previous sky.</p>
           <p v-if="state.clouds?.warning" class="bw-error" role="status">{{ state.clouds.warning }}</p>
         </div>
         <label class="bw-slider">Cloud cover<output>{{ Math.round((form.cloudMode === 'auto' ? state.clouds?.coverage ?? 0 : form.cloudCoverage) * 100) }}%</output><input :value="form.cloudMode === 'auto' ? state.clouds?.coverage ?? 0 : form.cloudCoverage" @input="form.cloudCoverage = Number($event.target.value)" type="range" min="0" max="1" step="0.01" :disabled="form.cloudMode !== 'manual'" aria-label="Cloud cover" @focus="editingKey = 'cloudCoverage'" @blur="editingKey = null" @change="apply('cloudCoverage')"><p class="bw-hint">Adjustable in manual mode. Uses the map's native cloud layers.</p></label>
       </section>
       <section class="bw-section bw-options" aria-label="Performance and rendering">
         <div>
-          <label class="bw-quality">Particle budget<select v-model="form.quality" @change="apply('quality')"><option value="low">Low / 2,400</option><option value="medium">Balanced / 6,000</option><option value="high">High / 12,000</option><option value="ultra">Ultra / 20,000</option></select></label>
+          <div class="bw-choice" @keydown.esc.stop.prevent="openChoice = null">
+            <span id="bw-budget-label">Particle budget</span>
+            <button type="button" aria-labelledby="bw-budget-label bw-budget-value" aria-controls="bw-budget-options" :aria-expanded="openChoice === 'quality'" @click="toggleChoice('quality')"><span id="bw-budget-value">{{ choiceLabel('quality') }}</span><span aria-hidden="true">{{ openChoice === 'quality' ? '−' : '+' }}</span></button>
+            <div v-if="openChoice === 'quality'" id="bw-budget-options" class="bw-choice-options" role="group" aria-label="Particle budget options"><button v-for="option in choices.quality" :key="option.value" type="button" :aria-pressed="form.quality === option.value" :class="{ 'is-selected': form.quality === option.value }" @click="choose('quality', option.value)">{{ option.label }}</button></div>
+          </div>
           <p class="bw-hint">{{ state.activeDrops.toLocaleString('en-US') }} active droplets / {{ state.maxDrops.toLocaleString('en-US') }} max.</p>
           <p class="bw-hint">Increasing coverage spreads the same droplets over a larger volume.</p>
         </div>
@@ -69,6 +77,11 @@ export default {
     const form = reactive({})
     const error = ref("")
     const editingKey = ref(null)
+    const openChoice = ref(null)
+    const choices = {
+      cloudMode: [{ value: "auto", label: "Follow rain intensity" }, { value: "manual", label: "Manual cloud cover" }, { value: "map", label: "Keep map settings" }],
+      quality: [{ value: "low", label: "Low / 2,400" }, { value: "medium", label: "Balanced / 6,000" }, { value: "high", label: "High / 12,000" }, { value: "ultra", label: "Ultra / 20,000" }]
+    }
     const events = useEvents()
     let disposed = false
     const controls = [
@@ -110,6 +123,14 @@ export default {
     }
     function refresh() { return request("getState") }
     function send(method, value) { return request(method, value) }
+    function choiceLabel(key) { return choices[key]?.find(option => option.value === form[key])?.label || "Choose an option" }
+    function toggleChoice(key) { if (choices[key]) openChoice.value = openChoice.value === key ? null : key }
+    function choose(key, value) {
+      if (!choices[key]?.some(option => option.value === value)) return
+      form[key] = value
+      openChoice.value = null
+      return apply(key)
+    }
     function apply(key) {
       const control = controls.find(item => item.key === key)
       if (control) {
@@ -138,7 +159,7 @@ export default {
     onMounted(refresh)
     // useEvents removes its listener automatically when this component unmounts.
     onUnmounted(() => { disposed = true })
-    return { state, form, error, editingKey, controls, statusText, presetDescription, refresh, apply, toggle, selectPreset, saveSlot, loadSlot, deleteSlot, format }
+    return { state, form, error, editingKey, openChoice, choices, choiceLabel, toggleChoice, choose, controls, statusText, presetDescription, refresh, apply, toggle, selectPreset, saveSlot, loadSlot, deleteSlot, format }
   }
 }
 </script>
@@ -150,7 +171,7 @@ export default {
 .bweather-settings h1{font-size:27px;letter-spacing:-.6px;font-weight:600;margin:0}
 .bweather-settings h2{font-size:15px;font-weight:600;margin:0 0 12px}
 .bweather-settings .bw-heading p{margin:3px 0 0;color:var(--bw-muted);font-size:13px}
-.bweather-settings button,.bweather-settings select{font:inherit;font-size:13px;color:var(--bw-text);background:#414141;border:1px solid #666666;border-radius:2px;padding:8px 12px;cursor:pointer}
+.bweather-settings button{font:inherit;font-size:13px;color:var(--bw-text);background:#414141;border:1px solid #666666;border-radius:2px;padding:8px 12px;cursor:pointer}
 .bweather-settings button:hover:not(:disabled){background:#505050}
 .bweather-settings button:disabled{opacity:.4;cursor:default}
 .bweather-settings .bw-power,.bweather-settings .is-selected{background:#f68b1f;color:#202020;border-color:#f68b1f}
@@ -163,7 +184,10 @@ export default {
 .bweather-settings .bw-slider{display:block;font-size:13px;min-width:0}
 .bweather-settings output{float:right;color:var(--bw-rain);font-variant-numeric:tabular-nums}
 .bweather-settings input[type=range]{display:block;width:100%;margin:8px 0 0;accent-color:var(--bw-rain);cursor:pointer}
-.bweather-settings .bw-quality{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.bweather-settings .bw-choice{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.bweather-settings .bw-choice>button{display:flex;justify-content:space-between;gap:10px;text-align:left;width:100%}
+.bweather-settings .bw-choice-options{display:flex;flex-direction:column;gap:4px;padding:6px;background:#242424;border:1px solid #666666}
+.bweather-settings .bw-choice-options button{text-align:left;width:100%}
 .bweather-settings .bw-checks label{display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0;cursor:pointer}
 .bweather-settings input[type=checkbox]{accent-color:var(--bw-rain);margin:0}
 .bweather-settings .bw-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
