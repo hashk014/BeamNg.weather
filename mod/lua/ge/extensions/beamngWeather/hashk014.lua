@@ -1,5 +1,6 @@
 -- BeamNg.weather: original visual-only rain controller for BeamNG.drive 0.40.
 local M = {}
+M.dependencies = {"ui_pause_actions"}
 local model = require("ge/extensions/beamngWeather/model")
 local tag = "beamngWeather_hashk014"
 local groupName = tag .. "_runtime"
@@ -181,6 +182,13 @@ local function onUpdate(dtReal, dtSim)
 end
 local function onExtensionLoaded()
   setExtensionUnloadMode(M, "manual")
+  ui_pause_actions.registerModButton({
+    id = tag,
+    tabId = "mods",
+    label = "BeamNg.weather",
+    icon = "wrench",
+    componentName = "/ui/ui-vue/mods/beamng_weather_hashk014/RainSettings.vue"
+  })
   local data = jsonReadFile(configPath)
   model.normalize(config, data)
   if type(data) == "table" then
@@ -210,7 +218,10 @@ M.savePersonalPreset, M.loadPersonalPreset, M.deletePersonalPreset = savePersona
 M.setEnabled = function(value) configure({enabled = value}) end
 M.setIntensity = function(value) configure({intensity = value}) end
 M.onUpdate, M.onExtensionLoaded = onUpdate, onExtensionLoaded
-M.onExtensionUnloaded = cleanup
+M.onExtensionUnloaded = function()
+  cleanup()
+  ui_pause_actions.unregisterModButton(tag)
+end
 M.onClientStartMission = function() suspended = false; healthTimer = 0 end
 M.onClientEndMission = onClientEndMission
 M.onSerialize = function() cleanup(); return {config = model.copy(config), personalPresets = personal} end

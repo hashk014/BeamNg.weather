@@ -4,8 +4,9 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.2.1** makes the interface, presets, documentation and release notes
-English. Existing settings and saved presets remain compatible.
+Version **0.3.0** adds a dedicated settings page to the native pause menu:
+**Esc > Mods > BeamNg.weather**. All controls are in English, and existing
+settings and saved presets remain compatible.
 
 **Experimental release for in-game testing.** Integration points were inspected
 in a local **0.40.1.0** installation. Texture atlases were checked outside the
@@ -13,7 +14,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.2.1-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.3.0-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -27,12 +28,22 @@ Keep the filename `beamng_weather_hashk014.zip` when updating.
 
 ## Open the rain controls
 
-Open the **UI Apps** layout editor, choose **Add app** and search for
-**BeamNg.weather**. The panel is optional; rain runs without it.
-If upgrading from 0.1, resize the old panel or remove it and add it again.
-Scroll inside the panel to reach advanced settings and custom preset slots.
+1. Load a Freeroam map and press **Esc** to open the pause menu.
+2. Select the **Mods** category.
+3. Select **BeamNg.weather** in the mod list. When it is the only registered
+   mod entry, the game selects its page automatically when you open Mods.
+4. Adjust the rain controls or load a preset. Changes are saved automatically;
+   sliders apply when released. Close the menu to view the result in motion.
 
-![Actual panel with simulated game state, outside BeamNG](docs/images/gui-preview.png)
+The page includes every control and all three custom preset slots. It uses
+BeamNG 0.40's native mod-button registration and Vue component loader, without
+replacing game UI files or binding its own Escape shortcut.
+
+![Pause settings component with simulated game state, outside BeamNG](docs/images/pause-settings-preview.png)
+
+The original HUD panel remains optional: open **UI Apps > Add app** and search
+for **BeamNg.weather**. Both interfaces share the same controller and saved
+settings. If upgrading from 0.1, resize the old HUD panel or add it again.
 
 ### Built-in and custom presets
 
@@ -114,13 +125,16 @@ If the extension is missing, first check that the mod is enabled.
 
 1. Load Gridmap v2, then West Coast USA, with only this mod enabled.
 2. Inspect rain in exterior camera and free camera mode.
-3. Try all five presets, enable/stop, zero intensity and all four particle budgets.
-4. Adjust all eight sliders, then save and load a Custom preset. Restart the
+3. Press Esc, open Mods and select BeamNg.weather. Confirm the settings page
+   appears without adding a HUD app. Close and reopen it, then reload Lua.
+4. Try all five presets, enable/stop, zero intensity and all four particle budgets.
+5. Adjust all eight sliders, then save and load a Custom preset. Restart the
    game and confirm the saved preset remains available.
-5. Check shelter with collisions on and off, then check the interior camera.
-6. Change maps, reset the vehicle and reload Lua with Ctrl+L.
-7. Disable the mod and restart the game to confirm its effects are removed.
-8. Record FPS and errors containing `beamngWeather_hashk014` in `beamng.log`
+6. Check shelter with collisions on and off, then check the interior camera.
+7. Change maps, reset the vehicle and reload Lua with Ctrl+L.
+8. Disable the mod and confirm its menu entry and effects are removed while
+   any other mods' entries remain available. Restart the game and check again.
+9. Record FPS and errors containing `beamngWeather_hashk014` in `beamng.log`
    at the root of the active user folder.
 
 When reporting a problem, include your exact game version, map, enabled mods,
@@ -133,6 +147,7 @@ status means effect objects were created; it does not verify their rendered outp
 mod/lua/ge/extensions/           GE Lua controller and visual profiles
 mod/scripts/                    Automatic loading
 mod/ui/modules/apps/            In-game AngularJS panel
+mod/ui/ui-vue/mods/              Native pause menu settings component
 mod/art/                        Original DDS textures and datablocks
 tests/                          LuaJIT and UI bridge tests with a mocked engine
 tools/build.py                  Reproducible mod ZIP builder
@@ -147,12 +162,16 @@ python tools/textures.py --check
 python -m unittest discover -s tests -v
 node --check mod/ui/modules/apps/BeamngWeatherHashk014/app.js
 node tests/test_ui.js
+node tests/test_pause_ui.js
 python tools/build.py
 ```
 
 The installable ZIP and SHA-256 checksum are written to `dist/`. GitHub Actions
 runs the same checks and uploads the ZIP as a build artifact.
 See [docs/VALIDATION.md](docs/VALIDATION.md) for the scope of verification.
+One local integration test reads the installed game's pause actions module.
+That test is skipped in CI, where the game is unavailable; all portable tests
+and both UI controller checks still run.
 
 ## References and license
 

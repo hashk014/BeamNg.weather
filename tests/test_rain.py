@@ -9,6 +9,7 @@ from tools.build import build, MOD
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "mod/lua/ge/extensions/beamngWeather/hashk014.lua"
+GAME_ACTIONS = Path(r"C:\Program Files (x86)\Steam\steamapps\common\BeamNG.drive\lua\ge\extensions\ui\pause\actions.lua")
 
 
 class RainTests(unittest.TestCase):
@@ -25,6 +26,45 @@ class RainTests(unittest.TestCase):
 
     def run_lua(self, source):
         self.lua.execute(source)
+
+    def test_pause_menu_registration_is_idempotent_and_unloads_only_own_entry(self):
+        self.run_lua('''
+          assert(extension.dependencies[1] == "ui_pause_actions")
+          local button=pauseButtons.beamngWeather_hashk014
+          assert(button.tabId=="mods" and button.label=="BeamNg.weather")
+          assert(button.componentName=="/ui/ui-vue/mods/beamng_weather_hashk014/RainSettings.vue")
+          pauseButtons.other_mod={id="other_mod",tabId="mods"}
+          extension.onExtensionLoaded()
+          local count=0
+          for _ in pairs(pauseButtons) do count=count+1 end
+          assert(count==2)
+          extension.onExtensionUnloaded()
+          assert(pauseButtons.beamngWeather_hashk014==nil and pauseButtons.other_mod)
+        ''')
+        self.assertTrue((MOD / "ui/ui-vue/mods/beamng_weather_hashk014/RainSettings.vue").is_file())
+
+    @unittest.skipUnless(GAME_ACTIONS.is_file(), "Local BeamNG pause API integration requires installed game files")
+    def test_integration_with_actual_beamng_pause_actions_module(self):
+        self.run_lua('''
+          package.preload["ge/extensions/ui/gridSelectorUtils/buttonModule"]=function()
+            return {create=function() return {} end}
+          end
+          _tr=function(key) return key=="ui.dashboard.mods" and "Mods" or key end
+        ''')
+        actions = self.lua.execute(GAME_ACTIONS.read_text(encoding="utf-8"))
+        self.lua.globals().ui_pause_actions = actions
+        self.run_lua('''
+          extension.onExtensionLoaded()
+          extension.onExtensionLoaded()
+          local tabs=ui_pause_actions.getVisibleModTabs()
+          assert(#tabs==1 and tabs[1].label=="Mods" and tabs[1].tabId=="mod:mods")
+          assert(#tabs[1].buttons==1)
+          assert(tabs[1].buttons[1].componentName=="/ui/ui-vue/mods/beamng_weather_hashk014/RainSettings.vue")
+          ui_pause_actions.registerModButton({id="other_mod",tabId="mods",label="Other mod"})
+          extension.onExtensionUnloaded()
+          tabs=ui_pause_actions.getVisibleModTabs()
+          assert(#tabs==1 and #tabs[1].buttons==1 and tabs[1].buttons[1].id=="other_mod")
+        ''')
 
     def test_automatic_rain_and_camera_follow_without_map_mutation(self):
         self.run_lua('''

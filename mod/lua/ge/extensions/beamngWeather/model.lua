@@ -1,6 +1,6 @@
 -- Visual settings only; this module never changes vehicle or world physics.
 local M = {}
-M.version = "0.2.1"
+M.version = "0.3.0"
 M.budgets = {low = 2400, medium = 6000, high = 12000, ultra = 20000}
 M.ranges = {
   intensity = {0, 1, 0.65}, dropScale = {0.5, 2, 1}, fallSpeed = {0.4, 1.8, 1},

@@ -3,6 +3,11 @@ registry = {}
 events = {}
 logs = {}
 savedConfig = nil
+pauseButtons = {}
+ui_pause_actions = {
+  registerModButton = function(button) pauseButtons[button.id] = button; return {success=true} end,
+  unregisterModButton = function(id) pauseButtons[id] = nil; return {success=true} end
+}
 mission = "levels/gridmap_v2/main.level.json"
 failLayer = nil
 failDatablocks = false
