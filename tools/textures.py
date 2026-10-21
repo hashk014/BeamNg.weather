@@ -4,7 +4,7 @@ import argparse
 import math
 import random
 import struct
-from io import BytesIO
+import zlib
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,9 +99,19 @@ def glass_texture(normal=False):
                     value = round(110+100*highlight+40*rim)
                     rgba = (value, min(255,value+10), min(255,value+18), round((18+100*rim+120*highlight)*edge*fade))
                 pixels[(frame%4)*cell+x, (frame//4)*cell+y] = rgba
-    result = BytesIO()
-    image.save(result, format="PNG", optimize=False)
-    return result.getvalue()
+    # Store explicit unfiltered rows and uncompressed DEFLATE blocks. Pillow's
+    # native compression backends can emit different PNG bytes on Windows/Linux.
+    rgba = image.tobytes()
+    raw = b"".join(b"\0"+rgba[y*size*4:(y+1)*size*4] for y in range(size))
+    stream = bytearray(b"\x78\x01")
+    for start in range(0,len(raw),65535):
+        block = raw[start:start+65535]
+        stream += bytes((1 if start+len(block)==len(raw) else 0,))
+        stream += struct.pack("<HH",len(block),len(block)^0xffff)+block
+    stream += struct.pack(">I",zlib.adler32(raw)&0xffffffff)
+    def chunk(kind,data):
+        return struct.pack(">I",len(data))+kind+data+struct.pack(">I",zlib.crc32(kind+data)&0xffffffff)
+    return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",size,size,8,6,0,0,0))+chunk(b"IDAT",bytes(stream))+chunk(b"IEND",b"")
 
 
 def outputs():
