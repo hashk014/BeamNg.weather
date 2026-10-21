@@ -4,7 +4,8 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.3.0** adds a dedicated settings page to the native pause menu:
+Version **0.4.0** fixes the pause page connection, adds a classic gray/orange
+interface and links native cloud cover to rain intensity. Open the settings at:
 **Esc > Mods > BeamNg.weather**. All controls are in English, and existing
 settings and saved presets remain compatible.
 
@@ -14,7 +15,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.3.0-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.4.0-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -22,7 +23,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
    Rain should begin after a few seconds.
 
 Do not install files in the game's Steam directory. The mod ZIP contains
-`art/`, `lua/`, `scripts/` and `ui/` directly. GitHub's automatic **Source code**
+`art/`, `lua/`, `scripts/`, `shaders/` and `ui/` directly. GitHub's automatic **Source code**
 archives are for developers and are not installable mod packages.
 Keep the filename `beamng_weather_hashk014.zip` when updating.
 
@@ -56,12 +57,26 @@ settings. If upgrading from 0.1, resize the old HUD panel or add it again.
 | Squall | Stronger density variation and turbulence |
 
 Selecting a preset applies its appearance and enables rain. Particle budget,
-collisions and transition duration remain global preferences. Adjusting the
+collisions, cloud control mode and transition duration remain global preferences. Adjusting the
 appearance manually switches to custom settings.
 
 The three **Custom** slots can save, overwrite, load and delete profiles.
-They persist between sessions. Each slot stores rain appearance and wind/lighting
+They persist between sessions. Each slot stores rain appearance, cloud mode/coverage and wind/lighting
 options, while particle budget, collisions and transition duration remain global.
+
+### Native clouds
+
+**Follow rain intensity** is the default. Existing native `CloudLayer` objects use
+60% to 100% coverage as rain intensity rises. Choosing another rain preset updates
+cloud cover immediately in automatic mode. **Manual cloud cover** lets you set
+coverage from 0% to 100%; **Keep map settings** releases control of the sky.
+Stopping rain, setting intensity to zero, ending the map or unloading the mod
+restores the previous cloud coverage. Native cloud edits observed while the mod
+is active become the new restoration value. Wind and cloud textures stay unchanged.
+
+Cloud mode is preserved when selecting built-in rain presets; custom slots store
+both mode and coverage. Maps without native cloud layers, or game modes that
+lock environment changes, show a warning while rain remains available.
 
 ### Available settings
 
@@ -109,8 +124,8 @@ If the extension is missing, first check that the mod is enabled.
   Slow, continuous variations keep density from remaining completely static.
 - Native camera following and velocity-based orientation support driving
   cameras and free camera mode.
-- The mod binds the game's existing precipitation shaders for lighting and
-  distance fading. Those game shaders are not redistributed.
+- Original standalone HLSL shaders provide precipitation lighting and distance fading.
+  Original DDS atlases use DXT5/BC3 compression with complete mip chains.
 - Existing maps, weather objects and materials are not replaced.
 - Effect objects are temporary (`canSave = false`) and are removed when rain
   stops, the map changes or the extension unloads.
@@ -130,7 +145,7 @@ If the extension is missing, first check that the mod is enabled.
 4. Try all five presets, enable/stop, zero intensity and all four particle budgets.
 5. Adjust all eight sliders, then save and load a Custom preset. Restart the
    game and confirm the saved preset remains available.
-6. Check shelter with collisions on and off, then check the interior camera.
+6. Try automatic and manual clouds, then stop rain and confirm the previous sky returns. Check shelter with collisions on and off, then check the interior camera.
 7. Change maps, reset the vehicle and reload Lua with Ctrl+L.
 8. Disable the mod and confirm its menu entry and effects are removed while
    any other mods' entries remain available. Restart the game and check again.
@@ -148,7 +163,8 @@ mod/lua/ge/extensions/           GE Lua controller and visual profiles
 mod/scripts/                    Automatic loading
 mod/ui/modules/apps/            In-game AngularJS panel
 mod/ui/ui-vue/mods/              Native pause menu settings component
-mod/art/                        Original DDS textures and datablocks
+mod/art/                        Original BC3 DDS textures and datablocks
+mod/shaders/                    Original standalone HLSL shaders
 tests/                          LuaJIT and UI bridge tests with a mocked engine
 tools/build.py                  Reproducible mod ZIP builder
 tools/textures.py               Procedural texture generator
@@ -169,9 +185,10 @@ python tools/build.py
 The installable ZIP and SHA-256 checksum are written to `dist/`. GitHub Actions
 runs the same checks and uploads the ZIP as a build artifact.
 See [docs/VALIDATION.md](docs/VALIDATION.md) for the scope of verification.
-One local integration test reads the installed game's pause actions module.
+A local Python integration test reads the installed game's pause actions module.
 That test is skipped in CI, where the game is unavailable; all portable tests
-and both UI controller checks still run.
+and both UI controller checks still run. The Node pause test also uses the
+installed generic Lua bridge when available, without registering mod signatures.
 
 ## References and license
 

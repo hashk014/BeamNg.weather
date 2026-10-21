@@ -1,21 +1,21 @@
-.bweather-panel{--bw-ink:#eef5f8;--bw-muted:#b5c9d4;--bw-rain:#a0d4e5;--bw-edge:#4d687b;box-sizing:border-box;height:100%;overflow:auto;padding:18px;background:rgba(28,46,60,.97);color:var(--bw-ink);font:13px/1.4 "Segoe UI",sans-serif;border-radius:8px;border-top:3px solid var(--bw-rain);color-scheme:dark}
+.bweather-panel{--bw-ink:#eeeeee;--bw-muted:#bdbdbd;--bw-rain:#f68b1f;--bw-edge:#666666;box-sizing:border-box;height:100%;overflow:auto;padding:18px;background:rgba(43,43,43,.98);color:var(--bw-ink);font:13px/1.4 "Segoe UI",sans-serif;border-radius:2px;border-top:3px solid var(--bw-rain);color-scheme:dark}
 .bweather-panel *{box-sizing:border-box}
 .bweather-panel .bweather-header{display:flex;align-items:center;gap:11px}
 .bweather-panel .bweather-header svg{width:37px;height:37px;fill:none;stroke:var(--bw-rain);stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .bweather-panel strong{display:block;font-size:20px;letter-spacing:-.5px;font-weight:600}
 .bweather-panel .bweather-header span{display:block;color:var(--bw-muted);font-size:11px}
-.bweather-panel button,.bweather-panel select{font:inherit;color:var(--bw-ink);background:#304c60;border:1px solid var(--bw-edge);border-radius:5px;padding:6px 9px;cursor:pointer}
-.bweather-panel button:hover:not(:disabled){background:#42657b}
+.bweather-panel button,.bweather-panel select{font:inherit;color:var(--bw-ink);background:#414141;border:1px solid var(--bw-edge);border-radius:2px;padding:6px 9px;cursor:pointer}
+.bweather-panel button:hover:not(:disabled){background:#505050}
 .bweather-panel button:disabled{cursor:default;opacity:.4}
 .bweather-panel .bweather-power{margin-left:auto;font-size:12px}
 .bweather-panel .bweather-status{display:flex;align-items:center;gap:7px;margin:15px 0 8px;color:var(--bw-muted);font-size:12px}
-.bweather-panel .bweather-dot{height:6px;width:6px;border-radius:50%;background:#8199a9;flex:none}
+.bweather-panel .bweather-dot{height:6px;width:6px;border-radius:50%;background:#888888;flex:none}
 .bweather-panel .bweather-dot.is-on{background:var(--bw-rain)}
-.bweather-panel .bweather-section{padding:13px 0;border-bottom:1px solid #425c70}
+.bweather-panel .bweather-section{padding:13px 0;border-bottom:1px solid #505050}
 .bweather-panel h2{font-size:13px;font-weight:600;margin:0 0 10px}
 .bweather-panel .bweather-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .bweather-panel .bweather-presets button{padding:7px 4px;font-size:12px}
-.bweather-panel .bweather-presets .is-active{color:#203b4c;background:#bee4f1;border-color:#bee4f1}
+.bweather-panel .bweather-presets .is-active{color:#202020;background:#f68b1f;border-color:#f68b1f}
 .bweather-panel .bweather-description{margin:9px 0 0;min-height:17px;color:var(--bw-muted);font-size:11px}
 .bweather-panel .bweather-slider{display:block;margin:0 0 12px}
 .bweather-panel output{float:right;color:var(--bw-rain);font-variant-numeric:tabular-nums}
@@ -23,7 +23,7 @@
 .bweather-panel .bweather-quality{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
 .bweather-panel select{max-width:58%;padding:5px 4px;font-size:12px}
 .bweather-panel .bweather-budget{margin:7px 0 0;text-align:right;font-size:11px;color:var(--bw-muted);font-variant-numeric:tabular-nums}
-.bweather-panel .bweather-disclosure{display:block;width:100%;padding:11px 0;text-align:left;background:transparent;border:0;border-bottom:1px solid #425c70;border-radius:0}
+.bweather-panel .bweather-disclosure{display:block;width:100%;padding:11px 0;text-align:left;background:transparent;border:0;border-bottom:1px solid #505050;border-radius:0}
 .bweather-panel .bweather-disclosure span{float:right;color:var(--bw-rain);font-size:17px;line-height:18px}
 .bweather-panel .bweather-check{display:flex;align-items:center;gap:8px;font-size:12px;margin:9px 0;cursor:pointer}
 .bweather-panel input[type=checkbox]{margin:0;accent-color:var(--bw-rain)}
@@ -35,4 +35,4 @@
 .bweather-panel .bweather-slot .bweather-delete{font-size:18px;line-height:14px}
 .bweather-panel footer{padding-top:13px;color:var(--bw-muted);font-size:10px}
 .bweather-panel .bweather-error{color:#ffcead;font-size:11px;overflow-wrap:anywhere}
-.bweather-panel button:focus-visible,.bweather-panel input:focus-visible,.bweather-panel select:focus-visible{outline:2px solid #e9f6fc;outline-offset:3px}
+.bweather-panel button:focus-visible,.bweather-panel input:focus-visible,.bweather-panel select:focus-visible{outline:2px solid #ffffff;outline-offset:3px}

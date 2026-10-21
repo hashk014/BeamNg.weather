@@ -1,4 +1,4 @@
-"""Original 4x4 rain atlases: RGBA8 DDS with full mip chains; stdlib only."""
+"""Original 4x4 rain atlases: legacy DXT5/BC3 DDS with full mip chains."""
 from pathlib import Path
 import argparse
 import math
@@ -7,6 +7,26 @@ import struct
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "mod/art/beamng_weather_hashk014"
+
+
+def bc3(width, height, pixels):
+    # These generated atlases have constant RGB; only opacity varies.
+    rgb = pixels[:3]
+    assert all(pixels[i:i+3] == rgb for i in range(0, len(pixels), 4))
+    color = ((rgb[0] >> 3) << 11) | ((rgb[1] >> 2) << 5) | (rgb[2] >> 3)
+    result = bytearray()
+    for by in range(0, height, 4):
+        for bx in range(0, width, 4):
+            alpha = [pixels[(min(height-1,by+y)*width+min(width-1,bx+x))*4+3] for y in range(4) for x in range(4)]
+            high, low = max(alpha), min(alpha)
+            indices = 0
+            if high != low:
+                palette = [high, low] + [((7-i)*high+i*low)//7 for i in range(1,7)]
+                for i, value in enumerate(alpha):
+                    index = min(range(8), key=lambda k: abs(palette[k]-value))
+                    indices |= index << (3*i)
+            result.extend(bytes((high,low)) + indices.to_bytes(6,'little') + struct.pack('<HHI',color,color,0))
+    return bytes(result)
 
 
 def dds(width, height, pixels):
@@ -23,10 +43,11 @@ def dds(width, height, pixels):
                     result[(y*nw+x)*4+c] = (sum(previous[i+c] for i in sources) + 2) // 4
         levels.append(bytes(result))
         w, h = nw, nh
-    header = [124, 0x2100F, height, width, width*4, 0, len(levels)] + [0]*11
-    header += [32, 0x41, 0, 32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000]
+    compressed = [bc3(max(1,width>>i),max(1,height>>i),level) for i,level in enumerate(levels)]
+    header = [124, 0xA1007, height, width, len(compressed[0]), 0, len(levels)] + [0]*11
+    header += [32, 4, int.from_bytes(b'DXT5','little'), 0, 0, 0, 0, 0]
     header += [0x401008, 0, 0, 0, 0]
-    return b"DDS " + struct.pack("<31I", *header) + b"".join(levels)
+    return b"DDS " + struct.pack("<31I", *header) + b"".join(compressed)
 
 
 def atlas(seed, opacity, width_scale, length_scale):

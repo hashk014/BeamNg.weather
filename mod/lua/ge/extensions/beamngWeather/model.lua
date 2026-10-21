@@ -1,14 +1,15 @@
 -- Visual settings only; this module never changes vehicle or world physics.
 local M = {}
-M.version = "0.3.0"
+M.version = "0.4.0"
 M.budgets = {low = 2400, medium = 6000, high = 12000, ultra = 20000}
 M.ranges = {
   intensity = {0, 1, 0.65}, dropScale = {0.5, 2, 1}, fallSpeed = {0.4, 1.8, 1},
   turbulence = {0, 1, 0.12}, variability = {0, 0.6, 0.16},
-  volume = {0.65, 1.6, 1}, contrast = {0.35, 1.5, 0.9}, transition = {0, 5, 1.5}
+  volume = {0.65, 1.6, 1}, contrast = {0.35, 1.5, 0.9}, transition = {0, 5, 1.5},
+  cloudCoverage = {0, 1, 0.85}
 }
 local booleans = {enabled = true, collisions = true, wind = true, lighting = true}
-local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting"}
+local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting", "cloudMode", "cloudCoverage"}
 M.presets = {
   {id = "drizzle", name = "Drizzle", description = "Fine droplets with a gentle fall", intensity = 0.26, dropScale = 0.65, fallSpeed = 0.65, turbulence = 0.08, variability = 0.09, contrast = 0.65, volume = 0.85, wind = true, lighting = true},
   {id = "gentle", name = "Light rain", description = "Steady, subtle rainfall", intensity = 0.46, dropScale = 0.85, fallSpeed = 0.85, turbulence = 0.08, variability = 0.12, contrast = 0.8, volume = 1, wind = true, lighting = true},
@@ -22,7 +23,7 @@ function M.copy(data)
   return result
 end
 function M.defaults()
-  local result = {schemaVersion = 2, quality = "medium", preset = "custom"}
+  local result = {schemaVersion = 3, quality = "medium", preset = "custom", cloudMode = "auto"}
   for k, spec in pairs(M.ranges) do result[k] = spec[3] end
   for k, v in pairs(booleans) do result[k] = v end
   return result
@@ -37,6 +38,7 @@ function M.normalize(config, data)
   end
   for k in pairs(booleans) do if type(data[k]) == "boolean" then config[k] = data[k] end end
   if M.budgets[data.quality] then config.quality = data.quality end
+  if data.cloudMode == "auto" or data.cloudMode == "manual" or data.cloudMode == "map" then config.cloudMode = data.cloudMode end
 end
 function M.profile(config)
   local result = {}
@@ -57,5 +59,10 @@ function M.counts(config, intensity, time)
   local total = math.floor(M.budgets[config.quality] * math.max(0, math.min(1, intensity * M.modulation(time, config.variability))))
   local fine, body = math.floor(total * 0.3), math.floor(total * 0.5)
   return {fine, body, total - fine - body}, total
+end
+function M.cloudTarget(config)
+  if not config.enabled or config.intensity <= 0 or config.cloudMode == "map" then return nil end
+  if config.cloudMode == "manual" then return config.cloudCoverage end
+  return 0.6 + 0.4 * config.intensity
 end
 return M

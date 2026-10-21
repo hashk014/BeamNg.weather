@@ -1,27 +1,16 @@
-# BeamNg.weather 0.3.0 alpha 1
+# BeamNg.weather 0.4.0 alpha 1
 
-Configure rain directly from **Esc > Mods > BeamNg.weather** in BeamNG.drive 0.40.
-No HUD app is required to access the settings page.
+Fix the pause menu connection and configure native clouds alongside rain.
 
-- Dedicated Vue settings page registered in the native pause menu's Mods category.
-- All five rain presets, eight visual controls and three custom preset slots.
-- Particle budget, collisions, wind and lighting options on the same page.
-- Automatic settings saving and synchronization with the optional HUD panel.
-- The menu entry is removed when the mod unloads, without removing other mods' entries.
-- English interface; existing settings and custom presets remain compatible.
+- Fix preset and setting requests in **Esc > Mods > BeamNg.weather**. The page now calls the game's generic Lua bridge instead of accessing an unregistered function signature. Every request returns the applied state or a diagnostic.
+- Classic gray interface with orange controls in both the pause page and optional HUD.
+- Native clouds: **Follow rain intensity** (default), **Manual cloud cover**, or **Keep map settings**. Automatic coverage ranges from 60% to 100% with rain intensity. Manual mode allows 0% to 100%.
+- Preserve cloud settings in custom profiles. Restore the previous sky when rain stops, the map ends, or the extension unloads. Unsupported or locked cloud layers show a separate warning.
+- Replace incompatible uncompressed DDS atlases with original DXT5/BC3 atlases, retaining all mipmaps and 16 variants per layer.
+- Replace deprecated precipitation shaders, which produced DirectX compilation errors in the previous version, with original standalone HLSL shaders.
 
-**Install:** replace `beamng_weather_hashk014.zip` in your active user folder's
-`mods` directory, without extracting it. Restart the game and load a Freeroam
-map, then press **Esc**, select **Mods** and choose **BeamNg.weather**.
-If it is the only mod entry, its settings page opens when you select Mods.
+**Install:** close BeamNG, replace `beamng_weather_hashk014.zip` in the active user folder's `mods` directory, then restart. Do not extract it or keep a second old copy. Open **Esc > Mods > BeamNg.weather** after loading a Freeroam map. Existing settings and custom presets are retained.
 
-Rain behaviour is unchanged. No windshield effects, puddles, friction changes,
-wet materials, surface splashes or rain audio are included.
+**Validation:** 24 local Python/LuaJIT checks, both UI controller checks, independent BC3 decoding, and offline HLSL compilation. Local checks use the actual installed pause actions module and generic Vue Lua bridge, with a mocked engine boundary. CI skips the installed-game integration and runs 23 portable Python tests. The GUI was checked in a browser with simulated state. Actual game rendering, GPU bindings and native cloud appearance still require in-game testing.
 
-**Validation:** 20 local Python/LuaJIT tests, including integration with the
-installed game's actual pause actions module. CI runs 19 portable tests and
-skips that installed-game test. Both UI controllers pass Node checks, and the
-Vue page was previewed with the game's Vue build and simulated game state.
-**Opening the page through the actual in-game pause menu still needs testing.**
-
-GitHub's automatic **Source code** ZIP is not the installable mod package.
+No windshield effects, puddles, friction changes, wet materials, surface splashes or rain audio are included. GitHub's automatic **Source code** ZIP is not the installable mod package.

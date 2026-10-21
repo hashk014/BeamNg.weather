@@ -1,19 +1,19 @@
 {
   "beamngWeather_hashk014_fineData": {
     "name": "beamngWeather_hashk014_fineData", "class": "PrecipitationData",
-    "dropShader": "beamngWeather_hashk014_shader",
+    "dropShader": "beamngWeather_hashk014_shader_v2",
     "dropTexture": "art/beamng_weather_hashk014/rain_fine.color.dds", "dropsPerSide": 4,
     "splashTexture": "art/beamng_weather_hashk014/rain_empty.color.dds", "splashesPerSide": 1
   },
   "beamngWeather_hashk014_bodyData": {
     "name": "beamngWeather_hashk014_bodyData", "class": "PrecipitationData",
-    "dropShader": "beamngWeather_hashk014_shader",
+    "dropShader": "beamngWeather_hashk014_shader_v2",
     "dropTexture": "art/beamng_weather_hashk014/rain_body.color.dds", "dropsPerSide": 4,
     "splashTexture": "art/beamng_weather_hashk014/rain_empty.color.dds", "splashesPerSide": 1
   },
   "beamngWeather_hashk014_distantData": {
     "name": "beamngWeather_hashk014_distantData", "class": "PrecipitationData",
-    "dropShader": "beamngWeather_hashk014_shader",
+    "dropShader": "beamngWeather_hashk014_shader_v2",
     "dropTexture": "art/beamng_weather_hashk014/rain_distant.color.dds", "dropsPerSide": 4,
     "splashTexture": "art/beamng_weather_hashk014/rain_empty.color.dds", "splashesPerSide": 1
   }

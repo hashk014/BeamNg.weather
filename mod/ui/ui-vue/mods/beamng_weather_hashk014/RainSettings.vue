@@ -21,6 +21,15 @@
           </label>
         </div>
       </section>
+      <section class="bw-section bw-sliders" aria-label="Native clouds">
+        <div>
+          <h2>Native clouds</h2>
+          <label class="bw-quality">Cloud control<select v-model="form.cloudMode" @change="apply('cloudMode')"><option value="auto">Follow rain intensity</option><option value="manual">Manual cloud cover</option><option value="map">Keep map settings</option></select></label>
+          <p class="bw-hint">Automatic mode brings cloud cover from 60% to 100% as rain increases. Stopping rain restores the previous sky.</p>
+          <p v-if="state.clouds?.warning" class="bw-error" role="status">{{ state.clouds.warning }}</p>
+        </div>
+        <label class="bw-slider">Cloud cover<output>{{ Math.round((form.cloudMode === 'auto' ? state.clouds?.coverage ?? 0 : form.cloudCoverage) * 100) }}%</output><input :value="form.cloudMode === 'auto' ? state.clouds?.coverage ?? 0 : form.cloudCoverage" @input="form.cloudCoverage = Number($event.target.value)" type="range" min="0" max="1" step="0.01" :disabled="form.cloudMode !== 'manual'" aria-label="Cloud cover" @focus="editingKey = 'cloudCoverage'" @blur="editingKey = null" @change="apply('cloudCoverage')"><p class="bw-hint">Adjustable in manual mode. Uses the map's native cloud layers.</p></label>
+      </section>
       <section class="bw-section bw-options" aria-label="Performance and rendering">
         <div>
           <label class="bw-quality">Particle budget<select v-model="form.quality" @change="apply('quality')"><option value="low">Low / 2,400</option><option value="medium">Balanced / 6,000</option><option value="high">High / 12,000</option><option value="ultra">Ultra / 20,000</option></select></label>
@@ -50,7 +59,7 @@
 
 <script>
 import { ref, reactive, computed, onMounted, onUnmounted } from "vue"
-import { lua } from "@/bridge"
+import { run } from "@/bridge/libs/Lua.js"
 import { useEvents } from "@/services/events"
 
 export default {
@@ -79,25 +88,28 @@ export default {
     function receive(data) {
       if (disposed || !data || typeof data !== "object") return
       state.value = data
+      error.value = ""
       for (const control of controls) if (editingKey.value !== control.key) form[control.key] = data[control.key]
-      for (const key of ["quality", "collisions", "wind", "lighting"]) form[key] = data[key]
+      for (const key of ["quality", "collisions", "wind", "lighting", "cloudMode", "cloudCoverage"]) if (editingKey.value !== key) form[key] = data[key]
     }
-    async function refresh() {
+    async function request(method, value = null) {
+      let timer
       try {
-        const data = await lua.extensions.beamngWeather_hashk014.getState()
-        if (!disposed) { receive(data); error.value = "" }
-      } catch {
-        if (!disposed) error.value = "Cannot connect to BeamNg.weather. Check that the mod is enabled, then retry."
+        // The static lua signature registry does not include third-party extensions.
+        const reply = await Promise.race([
+          run("extensions.beamngWeather_hashk014.uiRequest", [method, value], {}),
+          new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("The rain controller did not respond. Retry after the map has loaded.")), 8000) })
+        ])
+        if (!reply?.ok || !reply.state) throw new Error(reply?.error || "The rain controller returned an invalid response.")
+        receive(reply.state)
+      } catch (failure) {
+        if (!disposed) error.value = failure.message || "The setting could not be applied. Retry or check the game console."
+      } finally {
+        clearTimeout(timer)
       }
     }
-    async function send(method, value) {
-      try {
-        await lua.extensions.beamngWeather_hashk014[method](value)
-        if (!disposed) error.value = ""
-      } catch {
-        if (!disposed) error.value = "The setting could not be applied. Check the game console, then retry."
-      }
-    }
+    function refresh() { return request("getState") }
+    function send(method, value) { return request(method, value) }
     function apply(key) {
       const control = controls.find(item => item.key === key)
       if (control) {
@@ -106,6 +118,8 @@ export default {
         return send("configure", { [key]: Math.max(control.min, Math.min(control.max, value)) })
       }
       if (key === "quality" && ["low", "medium", "high", "ultra"].includes(form.quality)) return send("configure", { quality: form.quality })
+      if (key === "cloudMode" && ["auto", "manual", "map"].includes(form.cloudMode)) return send("configure", { cloudMode: form.cloudMode })
+      if (key === "cloudCoverage" && Number.isFinite(Number(form.cloudCoverage))) return send("configure", { cloudCoverage: Math.max(0, Math.min(1, Number(form.cloudCoverage))) })
       if (["collisions", "wind", "lighting"].includes(key)) return send("configure", { [key]: !!form[key] })
     }
     function toggle() { if (state.value) return send("setEnabled", !state.value.enabled) }
@@ -130,19 +144,19 @@ export default {
 </script>
 
 <style scoped>
-.bweather-settings{--bw-rain:#a0d4e5;--bw-text:#eef5f8;--bw-muted:#b5c9d4;box-sizing:border-box;min-width:0;width:100%;padding:20px 24px;color:var(--bw-text);font:15px/1.4 "Segoe UI",sans-serif}
+.bweather-settings{--bw-rain:#f68b1f;--bw-text:#eeeeee;--bw-muted:#bdbdbd;box-sizing:border-box;min-width:0;width:100%;padding:20px 24px;background:#2b2b2b;color-scheme:dark;color:var(--bw-text);font:15px/1.4 "Segoe UI",sans-serif}
 .bweather-settings *{box-sizing:border-box}
 .bweather-settings .bw-heading{display:flex;gap:15px;align-items:center;justify-content:space-between}
 .bweather-settings h1{font-size:27px;letter-spacing:-.6px;font-weight:600;margin:0}
 .bweather-settings h2{font-size:15px;font-weight:600;margin:0 0 12px}
 .bweather-settings .bw-heading p{margin:3px 0 0;color:var(--bw-muted);font-size:13px}
-.bweather-settings button,.bweather-settings select{font:inherit;font-size:13px;color:var(--bw-text);background:#304c60;border:1px solid #58788b;border-radius:5px;padding:8px 12px;cursor:pointer}
-.bweather-settings button:hover:not(:disabled){background:#42657b}
+.bweather-settings button,.bweather-settings select{font:inherit;font-size:13px;color:var(--bw-text);background:#414141;border:1px solid #666666;border-radius:2px;padding:8px 12px;cursor:pointer}
+.bweather-settings button:hover:not(:disabled){background:#505050}
 .bweather-settings button:disabled{opacity:.4;cursor:default}
-.bweather-settings .bw-power,.bweather-settings .is-selected{background:#bee4f1;color:#203b4c;border-color:#bee4f1}
-.bweather-settings button.is-selected:hover:not(:disabled),.bweather-settings button.bw-power:hover:not(:disabled){background:#d0edf7;color:#203b4c}
+.bweather-settings .bw-power,.bweather-settings .is-selected{background:#f68b1f;color:#202020;border-color:#f68b1f}
+.bweather-settings button.is-selected:hover:not(:disabled),.bweather-settings button.bw-power:hover:not(:disabled){background:#ffa340;color:#202020}
 .bweather-settings .bw-status{font-size:13px;color:var(--bw-rain);margin:15px 0 0}
-.bweather-settings .bw-section{padding:18px 0;border-bottom:1px solid #425c70}
+.bweather-settings .bw-section{padding:18px 0;border-bottom:1px solid #505050}
 .bweather-settings .bw-presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .bweather-settings .bw-hint{font-size:12px;color:var(--bw-muted);margin:9px 0 0}
 .bweather-settings .bw-sliders,.bweather-settings .bw-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 26px}
@@ -159,6 +173,6 @@ export default {
 .bweather-settings .bw-slot button{padding:5px 8px;font-size:12px}
 .bweather-settings footer{margin-top:15px;font-size:11px;color:var(--bw-muted)}
 .bweather-settings .bw-error{font-size:13px;color:#ffcead;overflow-wrap:anywhere}
-.bweather-settings button:focus-visible,.bweather-settings input:focus-visible,.bweather-settings select:focus-visible{outline:2px solid #e9f6fc;outline-offset:3px}
+.bweather-settings button:focus-visible,.bweather-settings input:focus-visible,.bweather-settings select:focus-visible{outline:2px solid #ffffff;outline-offset:3px}
 @media(max-width:650px){.bweather-settings{padding:16px}.bweather-settings .bw-presets{grid-template-columns:repeat(3,minmax(0,1fr))}.bweather-settings .bw-sliders,.bweather-settings .bw-options{grid-template-columns:1fr}.bweather-settings .bw-slots{grid-template-columns:1fr}}
 </style>

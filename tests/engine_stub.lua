@@ -30,9 +30,33 @@ end
 guihooks = {trigger = function(name, data) table.insert(events, {name, data}) end}
 core_camera = {getPosition = function() return cameraPosition end}
 extensions = {unload = function(name) unloaded = name; extension.onExtensionUnloaded() end}
-scenetree = {findObject = function(name) return registry[name] end}
+local nextID = 0
+scenetree = {
+  findObject = function(name) return registry[name] end,
+  findObjectById = function(id)
+    for _, object in pairs(registry) do if object.id == id then return object end end
+  end,
+  findClassObjects = function(class)
+    local names = {}
+    for name, object in pairs(registry) do if object.class == class then table.insert(names, name) end end
+    return names
+  end
+}
+cloudChangesAllowed = true
+core_environment = {
+  canChange = function() return cloudChangesAllowed end,
+  getCloudCoverByID = function(id) return scenetree.findObjectById(id).coverage end,
+  setCloudCoverByID = function(id, value)
+    local object = scenetree.findObjectById(id)
+    object.coverage = value
+    object:postApply()
+  end
+}
 function createObject(class)
-  local obj = {class = class, children = {}}
+  nextID = nextID + 1
+  local obj = {class = class, children = {}, id = nextID}
+  function obj:getID() return self.id end
+  function obj:postApply() self.applies = (self.applies or 0) + 1 end
   function obj:setField(key, index, value) self[key] = value end
   function obj:registerObject(name)
     if self.class == "Precipitation" then
@@ -60,6 +84,9 @@ function startScene()
   registry.rain_drop = {class = "PrecipitationData"}
   registry.rain_medium = {class = "PrecipitationData"}
   registry.mapRain = {numDrops = 7}
+  local cloud = createObject("CloudLayer")
+  cloud.coverage, cloud.windSpeed = 0.2, 4
+  cloud:registerObject("mapClouds")
 end
 function rainObjectCount()
   local count = 0

@@ -4,6 +4,8 @@ import json
 import unittest
 import zipfile
 import struct
+from io import BytesIO
+from PIL import Image
 from lupa.luajit21 import LuaRuntime
 from tools.build import build, MOD
 
@@ -77,8 +79,8 @@ class RainTests(unittest.TestCase):
           assert(registry.beamngWeather_hashk014_fine.position == cameraPosition)
           assert(registry.beamngWeather_hashk014_fine.followCam)
           assert(registry.mapRain.numDrops == 7)
-          assert(registry.beamngWeather_hashk014_shader.DXVertexShaderFile == "shaders/common/precipV.hlsl")
-          assert(registry.beamngWeather_hashk014_shader.DXPixelShaderFile == "shaders/common/precipP.hlsl")
+          assert(registry.beamngWeather_hashk014_shader_v2.DXVertexShaderFile == "shaders/beamng_weather_hashk014/rainV.hlsl")
+          assert(registry.beamngWeather_hashk014_shader_v2.DXPixelShaderFile == "shaders/beamng_weather_hashk014/rainP.hlsl")
           extension.onUpdate(10)
           assert(rainObjectCount() == 3)
         ''')
@@ -295,6 +297,83 @@ class RainTests(unittest.TestCase):
           end
         ''')
 
+    def test_ui_requests_acknowledge_applied_state_and_reject_unknown_commands(self):
+        self.run_lua('''
+          local reply=extension.uiRequest("applyPreset", "downpour")
+          assert(reply.ok and reply.state.preset=="downpour")
+          reply=extension.uiRequest("configure", {cloudMode="manual",cloudCoverage=0.4})
+          assert(reply.ok and reply.state.cloudCoverage==0.4 and reply.state.clouds.available)
+          assert(not extension.uiRequest("loadPersonalPreset", 3).ok)
+          assert(not extension.uiRequest("onExtensionUnloaded").ok)
+          assert(extension.uiRequest("getState").ok)
+        ''')
+
+    def test_native_cloud_modes_and_restoration(self):
+        self.run_lua('''
+          extension.onUpdate(1)
+          assert(math.abs(registry.mapClouds.coverage-(0.6+0.4*extension.getState().intensity))<0.0001)
+          assert(registry.mapClouds.windSpeed==4)
+          extension.configure({cloudMode="manual", cloudCoverage=0.45})
+          assert(registry.mapClouds.coverage==0.45)
+          extension.configure({cloudMode="map"})
+          assert(registry.mapClouds.coverage==0.2)
+          extension.configure({cloudMode="auto"})
+          extension.setEnabled(false)
+          assert(registry.mapClouds.coverage==0.2)
+          extension.setEnabled(true)
+          extension.setIntensity(0)
+          assert(registry.mapClouds.coverage==0.2)
+          extension.setIntensity(0.5)
+          extension.onSerialize()
+          assert(registry.mapClouds.coverage==0.2)
+          extension.onUpdate(1)
+          extension.onExtensionUnloaded()
+          assert(registry.mapClouds.coverage==0.2)
+        ''')
+
+    def test_clouds_respect_external_edits_locks_and_missing_layers(self):
+        self.run_lua('''
+          extension.onUpdate(1)
+          registry.mapClouds.coverage=0.35
+          extension.onUpdate(1)
+          extension.setEnabled(false)
+          assert(registry.mapClouds.coverage==0.35)
+          extension.setEnabled(true)
+          registry.mapClouds.coverage=0.1
+          extension.setEnabled(false)
+          assert(registry.mapClouds.coverage==0.1)
+          cloudChangesAllowed=false
+          extension.setEnabled(true)
+          assert(extension.getState().status=="raining")
+          assert(extension.getState().clouds.warning:find("locked"))
+          assert(registry.mapClouds.coverage==0.1)
+          cloudChangesAllowed=true
+          registry.mapClouds:delete()
+          extension.onUpdate(1)
+          assert(extension.getState().status=="raining" and not extension.getState().clouds.available)
+          assert(extension.getState().clouds.warning:find("no supported"))
+        ''')
+
+    def test_clouds_multi_layer_map_swap_and_saved_profile(self):
+        self.run_lua('''
+          local extra=createObject("CloudLayer")
+          extra.coverage=0.4; extra:registerObject("extraClouds")
+          extension.configure({cloudMode="manual",cloudCoverage=0.9})
+          assert(extra.coverage==0.9 and extension.getState().clouds.count==2)
+          extension.savePersonalPreset(1)
+          extension.configure({cloudMode="map"})
+          assert(extra.coverage==0.4)
+          extension.loadPersonalPreset(1)
+          assert(extension.getState().cloudMode=="manual" and extra.coverage==0.9)
+          extension.onClientEndMission()
+          assert(extra.coverage==0.4 and registry.mapClouds.coverage==0.2)
+          mission="levels/other/main.level.json"
+          registry.mapClouds.coverage=0.12
+          extension.onClientStartMission(); extension.onUpdate(1)
+          extension.setEnabled(false)
+          assert(registry.mapClouds.coverage==0.12)
+        ''')
+
 
 class PackageTests(unittest.TestCase):
     def test_dds_assets_are_complete_and_original_atlases_have_variants(self):
@@ -305,8 +384,10 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(raw[:4], b"DDS ")
             header = struct.unpack("<31I", raw[4:128])
             self.assertEqual((header[2], header[3], header[6]), (512, 512, 10))
-            self.assertEqual(len(raw), 128 + sum(max(1,512>>m)**2*4 for m in range(10)))
-            alphas = raw[131:128+512*512*4:4]
+            self.assertEqual(raw[84:88], b"DXT5")
+            self.assertEqual(len(raw), 128 + sum(max(1, (max(1,512>>m)+3)//4)**2*16 for m in range(10)))
+            with Image.open(BytesIO(raw)) as image:
+                alphas = image.convert("RGBA").getchannel("A").tobytes()
             self.assertGreater(max(alphas), 30)
             tiles = set()
             for cy in range(4):

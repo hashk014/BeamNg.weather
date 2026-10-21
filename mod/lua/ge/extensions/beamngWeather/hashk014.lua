@@ -1,7 +1,8 @@
 -- BeamNg.weather: original visual-only rain controller for BeamNG.drive 0.40.
 local M = {}
-M.dependencies = {"ui_pause_actions"}
+M.dependencies = {"ui_pause_actions", "core_environment"}
 local model = require("ge/extensions/beamngWeather/model")
+local clouds = require("ge/extensions/beamngWeather/clouds")
 local tag = "beamngWeather_hashk014"
 local groupName = tag .. "_runtime"
 local configPath = "settings/beamngWeather_hashk014.json"
@@ -35,6 +36,7 @@ local function getState()
   data.version, data.status, data.error = model.version, status, lastError
   data.maxDrops, data.activeDrops = model.budgets[config.quality], activeDrops
   data.presets, data.personalPresets = model.presets, {}
+  data.clouds = clouds.getState()
   for i = 1, 3 do data.personalPresets[i] = {slot = i, saved = personal[tostring(i)] ~= nil} end
   return data
 end
@@ -74,16 +76,16 @@ local function createLayer(spec)
 end
 local function createRain()
   -- Without a precipitation shader, the native fallback ignores lighting and
-  -- distance fading. Bind the game's own shaders under our unique name.
-  if not scenetree.findObject(tag .. "_shader") then
+  -- distance fading. Use original standalone shaders without legacy macros.
+  if not scenetree.findObject(tag .. "_shader_v2") then
     local shader = createObject("ShaderData")
     if not shader then error("Cannot create rain shader") end
     shader.canSave = false
-    shader.DXVertexShaderFile = "shaders/common/precipV.hlsl"
-    shader.DXPixelShaderFile = "shaders/common/precipP.hlsl"
+    shader.DXVertexShaderFile = "shaders/beamng_weather_hashk014/rainV.hlsl"
+    shader.DXPixelShaderFile = "shaders/beamng_weather_hashk014/rainP.hlsl"
     shader.pixVersion = 5
     shader:setField("samplerNames", 0, "$diffuseMap")
-    shader:registerObject(tag .. "_shader")
+    shader:registerObject(tag .. "_shader_v2")
     if not live(shader) then error("Cannot register rain shader") end
   end
   local missing = false
@@ -113,10 +115,12 @@ local function updateCounts()
 end
 local function reconcile(updateParameters)
   if not inMission() then
+    clouds.release()
     cleanup(); currentIntensity, status, lastError = 0, "waiting", nil
     return
   end
   if not config.enabled or config.intensity == 0 then
+    clouds.release()
     cleanup(); currentIntensity, status, lastError = 0, "stopped", nil
     return
   end
@@ -127,8 +131,10 @@ local function reconcile(updateParameters)
     if updateParameters then for i, obj in ipairs(layers) do setLayerParameters(obj, definitions[i]) end end
     if config.transition == 0 then currentIntensity = config.intensity end
     updateCounts()
+    clouds.update(config)
   end)
   if ok then status, lastError = "raining", nil else
+    clouds.release()
     cleanup(); status = "unavailable"
     if lastError ~= tostring(err) then log("E", tag, tostring(err)) end
     lastError = tostring(err)
@@ -209,6 +215,7 @@ local function onExtensionLoaded()
 end
 local function onClientEndMission()
   suspended = true
+  clouds.release()
   cleanup(); currentIntensity, status, lastError = 0, "waiting", nil
   requestState()
 end
@@ -219,12 +226,13 @@ M.setEnabled = function(value) configure({enabled = value}) end
 M.setIntensity = function(value) configure({intensity = value}) end
 M.onUpdate, M.onExtensionLoaded = onUpdate, onExtensionLoaded
 M.onExtensionUnloaded = function()
+  clouds.release()
   cleanup()
   ui_pause_actions.unregisterModButton(tag)
 end
 M.onClientStartMission = function() suspended = false; healthTimer = 0 end
 M.onClientEndMission = onClientEndMission
-M.onSerialize = function() cleanup(); return {config = model.copy(config), personalPresets = personal} end
+M.onSerialize = function() clouds.release(); cleanup(); return {config = model.copy(config), personalPresets = personal} end
 M.onDeserialized = function(data)
   if type(data) == "table" then
     model.normalize(config, data.config)
@@ -235,5 +243,24 @@ M.onDeserialized = function(data)
 end
 M.onModDeactivated = function(mod)
   if type(mod) == "table" and mod.modname == "beamng_weather_hashk014" then extensions.unload(tag) end
+end
+-- The Vue Lua signature registry contains only built-in game functions. The
+-- page calls this explicit endpoint with the bridge's generic run() helper.
+local uiCommands = {
+  getState = getState, configure = configure, applyPreset = applyPreset,
+  setEnabled = M.setEnabled, setIntensity = M.setIntensity,
+  savePersonalPreset = savePersonalPreset, loadPersonalPreset = loadPersonalPreset,
+  deletePersonalPreset = deletePersonalPreset
+}
+M.uiRequest = function(method, payload)
+  local command = uiCommands[method]
+  if not command then return {ok = false, error = "Unsupported rain controller command."} end
+  local ok, result = pcall(command, payload)
+  if not ok then
+    log("E", tag, "UI request failed: " .. tostring(result))
+    return {ok = false, error = "Rain controller error: " .. tostring(result)}
+  end
+  if result == false then return {ok = false, error = "The requested preset is unavailable."} end
+  return {ok = true, state = getState()}
 end
 return M

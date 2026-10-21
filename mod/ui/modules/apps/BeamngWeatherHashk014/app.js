@@ -47,7 +47,7 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
           scope.controls.forEach(function (control) {
             if (scope.edit.key !== control.key) scope.form[control.key] = state[control.key];
           });
-          booleanFields.concat(['quality']).forEach(function (key) { scope.form[key] = state[key]; });
+          booleanFields.concat(['quality', 'cloudMode', 'cloudCoverage']).forEach(function (key) { scope.form[key] = state[key]; });
           var active = (state.presets || []).filter(function (preset) { return preset.id === state.preset; })[0];
           scope.presetDescription = active ? active.description : 'Your custom settings';
         });
@@ -65,6 +65,12 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
           var value = Number(scope.form[key]);
           if (!isFinite(value)) return;
           payload[key] = Math.max(control.min, Math.min(control.max, value));
+        } else if (key === 'cloudCoverage') {
+          if (!isFinite(Number(scope.form.cloudCoverage))) return;
+          payload.cloudCoverage = Math.max(0, Math.min(1, Number(scope.form.cloudCoverage)));
+        } else if (key === 'cloudMode') {
+          if (['auto', 'manual', 'map'].indexOf(scope.form.cloudMode) < 0) return;
+          payload.cloudMode = scope.form.cloudMode;
         } else if (key === 'quality') {
           if (qualityNames.indexOf(scope.form.quality) < 0) return;
           payload.quality = scope.form.quality;

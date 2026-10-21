@@ -9,19 +9,41 @@ let fail = false;
 const state = {
   enabled: true, status: 'raining', preset: 'shower', intensity: 0.72, dropScale: 1,
   fallSpeed: 1.05, turbulence: 0.15, variability: 0.2, contrast: 0.95, volume: 1,
+  cloudMode: 'auto', cloudCoverage: 0.85, clouds: {available:true,coverage:0.888},
   transition: 1.5, quality: 'medium', collisions: true, wind: true, lighting: true,
   activeDrops: 4320, maxDrops: 6000, presets: [{id:'shower',name:'Shower',description:'Rain shower'}],
   personalPresets: [{slot:1,saved:false},{slot:2,saved:false},{slot:3,saved:false}]
 };
-const controller = {getState: async () => { if (fail) throw Error('offline'); return state; }};
-for (const method of ['configure','applyPreset','setEnabled','savePersonalPreset','loadPersonalPreset','deletePersonalPreset']) {
-  controller[method] = async value => { if (fail) throw Error('offline'); calls.push({method,value}); };
+// No mod functions exist in the game's static signature registry.
+const signatures = {extensions: {}};
+let nativeRun;
+const bridgeFile = 'C:/Program Files (x86)/Steam/steamapps/common/BeamNG.drive/ui/ui-vue/src/bridge/libs/Lua.js';
+if (fs.existsSync(bridgeFile)) {
+  const bridgeContext = {LuaFunctionSignatures:signatures, Any:value=>value, Integer:Math.trunc, Optional:value=>value, console};
+  vm.createContext(bridgeContext);
+  const bridgeScript=fs.readFileSync(bridgeFile,'utf8').replace(/^import .*$/gm,'').replace(/^export (?:default .*|\{.*\})$/gm,'').replace(/^export /gm,'');
+  vm.runInContext(bridgeScript+'\nglobalThis.nativeRun=run; globalThis.provide=setBridgeProvider;',bridgeContext);
+  bridgeContext.provide(() => ({api:{serializeToLua:JSON.stringify,engineLua(code, callback) {
+    assert.match(code,/^extensions\.beamngWeather_hashk014\.uiRequest\(/);
+    callback({ok:true,state});
+  }}}));
+  nativeRun=bridgeContext.nativeRun;
+  console.log('Using actual installed BeamNG generic Lua bridge (no mod signature registered)');
 }
+const endpoint = async (path, args, options) => {
+  assert.equal(path, 'extensions.beamngWeather_hashk014.uiRequest');
+  assert.equal(typeof options, 'object');
+  const [method, value] = args;
+  if (fail) throw Error('offline');
+  if (method !== 'getState') calls.push({method, value});
+  return nativeRun ? nativeRun(path,args,options) : {ok:true, state};
+};
 const context = {
   ref: value => ({value}), reactive: value => value,
   computed: getter => ({get value() { return getter(); }}),
   onMounted: callback => mounted.push(callback), onUnmounted: callback => unmounted.push(callback),
-  lua: {extensions: {beamngWeather_hashk014: controller}},
+  run: endpoint, setTimeout, clearTimeout,
+  lua: signatures,
   useEvents: () => ({on(name, callback) { handlers[name]=callback; unmounted.push(() => delete handlers[name]); }})
 };
 vm.createContext(context);
@@ -57,8 +79,10 @@ const ui = context.component.setup();
   assert.equal(ui.form.intensity, 0.9);
   ui.editingKey.value=null; handlers.BeamngWeatherHashk014State(state);
   assert.equal(ui.format(ui.controls[0]), '72%');
-  fail=true; await ui.refresh(); assert.match(ui.error.value, /Cannot connect/);
-  await ui.toggle(); assert.match(ui.error.value, /could not be applied/);
+  ui.form.cloudMode='manual'; await ui.apply('cloudMode'); assert.equal(calls.pop().value.cloudMode,'manual');
+  ui.form.cloudCoverage=2; await ui.apply('cloudCoverage'); assert.equal(calls.pop().value.cloudCoverage,1);
+  fail=true; await ui.refresh(); assert.match(ui.error.value, /offline/);
+  await ui.toggle(); assert.match(ui.error.value, /offline/);
   fail=false; await ui.refresh(); assert.equal(ui.error.value, '');
   for (const callback of unmounted) callback();
   assert.equal(handlers.BeamngWeatherHashk014State, undefined);

@@ -25,6 +25,13 @@
       <label class="bweather-check"><input type="checkbox" ng-model="form.lighting" ng-change="apply('lighting')">Match droplets to sky lighting</label>
       <p class="bweather-hint">Increasing coverage spreads the same droplets over a larger volume.</p>
     </section>
+    <section class="bweather-section" aria-label="Native clouds">
+      <h2>Native clouds</h2>
+      <label class="bweather-quality">Cloud control<select ng-model="form.cloudMode" ng-change="apply('cloudMode')"><option value="auto">Follow rain intensity</option><option value="manual">Manual cloud cover</option><option value="map">Keep map settings</option></select></label>
+      <label class="bweather-slider" ng-if="form.cloudMode === 'manual'">Cloud cover<output>{{form.cloudCoverage * 100 | number:0}}%</output><input type="range" min="0" max="1" step="0.01" ng-model="form.cloudCoverage" ng-change="apply('cloudCoverage')" aria-label="Cloud cover"></label>
+      <p class="bweather-hint">Stopping rain restores the previous sky.</p>
+      <p class="bweather-error" ng-if="weather.clouds.warning">{{weather.clouds.warning}}</p>
+    </section>
     <section class="bweather-section bweather-personal" aria-label="Custom presets">
       <h2>My presets</h2>
       <div class="bweather-slot" ng-repeat="slot in weather.personalPresets"><span>Custom {{slot.slot}}<small>{{slot.saved ? 'Saved' : 'Empty'}}</small></span><button type="button" ng-disabled="!slot.saved" ng-click="loadSlot(slot.slot)">Load</button><button type="button" ng-click="saveSlot(slot.slot)">{{slot.saved ? 'Overwrite' : 'Save'}}</button><button class="bweather-delete" type="button" ng-disabled="!slot.saved" ng-click="deleteSlot(slot.slot)" aria-label="Delete preset {{slot.slot}}">×</button></div>
