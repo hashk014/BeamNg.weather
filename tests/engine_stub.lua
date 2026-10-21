@@ -5,12 +5,18 @@ logs = {}
 savedConfig = nil
 mission = "levels/gridmap_v2/main.level.json"
 failLayer = nil
+failDatablocks = false
 cameraPosition = {x = 15, y = 20, z = 3}
 function log(level, tag, message) table.insert(logs, {level, tag, message}) end
 function setExtensionUnloadMode() end
 function getMissionFilename() return mission end
 function simObjectExists(obj) return obj and obj.registered and not obj.deleted end
 function jsonReadFile() return savedConfig end
+function loadJsonMaterialsFile(path)
+  assert(path == "art/beamng_weather_hashk014/rain.datablocks.json")
+  if failDatablocks then return end
+  for name, data in pairs(testDatablocks) do registry[name] = data end
+end
 function jsonWriteFile(path, data)
   savedConfig = {}
   for k, v in pairs(data) do savedConfig[k] = v end
@@ -24,7 +30,10 @@ function createObject(class)
   local obj = {class = class, children = {}}
   function obj:setField(key, index, value) self[key] = value end
   function obj:registerObject(name)
-    if self.class == "Precipitation" then assert(registry[self.dataBlock], "Datablock required before registration") end
+    if self.class == "Precipitation" then
+      assert(registry[self.dataBlock], "Datablock required before registration")
+      assert(registry[registry[self.dataBlock].dropShader], "Shader required before precipitation")
+    end
     if failLayer and name:find(failLayer, 1, true) then error("Injected registration failure") end
     assert(not registry[name], "Duplicate scene name")
     self.name = name
