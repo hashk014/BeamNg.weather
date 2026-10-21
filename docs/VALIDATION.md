@@ -1,47 +1,49 @@
-# Validation de la préversion 0.2.0
+# Validation: 0.2.1 experimental release
 
-Date : 21 octobre 2026. Cible : BeamNG.drive 0.40.x.
+Date: October 21, 2026. Target: BeamNG.drive 0.40.x.
 
-## Vérifications réalisées
+## Completed checks
 
-- Inspection en lecture seule d'une installation BeamNG.drive **0.40.1.0**.
-- Chargement des datablocks via `loadJsonMaterialsFile`, chargement automatique
-  du mod et cycle de vie vérifiés dans les scripts du jeu.
-- Présence des noms de champs de rendu et de mouvement utilisés dans le binaire
-  du jeu. Cette présence n'est pas une validation de leur comportement en jeu.
-- Étude du code de précipitations Torque3D pour les atlas, vitesses, turbulences,
-  orientation et atténuation. Le moteur BeamNG est un dérivé : un test en jeu
-  reste nécessaire pour confirmer le comportement exact de cette version.
-- **18 tests Python/LuaJIT 2.1, Lua 5.1** : cycle de vie, budgets, presets,
-  persistance, migration depuis 0.1, transitions, pause, erreurs et reprise,
-  nettoyage, absence d'effets de surface, textures et archive.
-- Test Node du pont UI : réglage individuel sans écraser les autres options,
-  presets, emplacements personnels, bornes et protection du slider pendant l'édition.
-- Régénération déterministe des quatre textures, contrôle des en-têtes DDS,
-  mipmaps complets, 16 variantes distinctes et texture de surface transparente.
-- Vérification visuelle des textures originales, hors moteur.
-- Liaison des shaders natifs `precipV.hlsl` et `precipP.hlsl` sous un nom propre
-  au mod, suivant la création de `ShaderData` dans les scripts du jeu.
-  Le shader applique lumière et atténuation ; sa compilation GPU reste à vérifier en jeu.
-- Aperçu du vrai panneau et de son contrôleur avec l'**AngularJS 1.5.8 du jeu**,
-  dans un navigateur local à état simulé. Clics vérifiés : preset Bruine,
-  slider d'intensité, sauvegarde et chargement personnel, options avancées.
-- Correction spécifique aux bornes interpolées des sliders dans AngularJS 1.5.8.
-- ZIP reproductible, chemins sûrs et contenu identique aux sources.
+- Read-only inspection of a local BeamNG.drive **0.40.1.0** installation.
+- Datablock loading through `loadJsonMaterialsFile`, automatic mod loading and
+  lifecycle hooks checked against game scripts.
+- Names of the rendering and movement fields used by the mod found in the
+  game binary. Their presence does not establish correct in-game behaviour.
+- Torque3D precipitation code inspected for atlas layout, speeds, turbulence,
+  orientation and fading. BeamNG is a derivative engine; actual behaviour in
+  this game version still requires in-game testing.
+- **18 Python/LuaJIT 2.1, Lua 5.1 tests:** lifecycle, budgets, built-in presets,
+  persistence, migration from 0.1, transitions, pause, failures and recovery,
+  cleanup, absence of surface effects, texture assets and packaging.
+- Node UI bridge checks: individual setting changes without overwriting other
+  options, presets, custom slots, bounds and slider protection during editing.
+- Reproducible generation of four textures; DDS headers, complete mip chains,
+  16 distinct atlas variants and the transparent surface texture checked.
+- Original textures visually inspected outside the engine.
+- Native `precipV.hlsl` and `precipP.hlsl` shaders bound under a unique mod name,
+  following the game's `ShaderData` creation pattern. GPU compilation and
+  rendered lighting/fading still require in-game verification.
+- Actual panel and controller previewed with the game's **AngularJS 1.5.8**
+  in a local browser using simulated game state. Preset selection, intensity,
+  custom preset save/load and advanced settings checked.
+- AngularJS 1.5.8 interpolated slider bounds corrected.
+- Reproducible ZIP, safe relative paths and contents identical to source files.
+- Version 0.2.1 translates UI text, preset names/descriptions, documentation,
+  release metadata and preview artwork to English. Preset IDs and saved-setting
+  keys remain unchanged.
 
-![Panneau hors moteur, état de jeu simulé](images/gui-preview.png)
+![Panel outside the engine, with simulated game state](images/gui-preview.png)
 
-## Vérifications laissées au testeur
+## Checks left to the in-game tester
 
-Le jeu n'a pas été piloté pour ce projet. Il reste à confirmer le rendu de la
-pluie, le chargement des DDS et des datablocks par le moteur réel, les FPS,
-les collisions et l'intégration de l'app dans la disposition UI du jeu.
-Le réalisme visuel doit être apprécié en mouvement sur les cartes utilisées.
+The game has not been controlled for this project. Rain rendering, DDS and
+datablock loading in the actual engine, FPS, collisions and integration with
+the game's UI layout still need confirmation. Visual realism must be judged
+in motion on the maps being used.
 
-Les tests à moteur simulé ne valident pas les bindings C++, le GPU, les
-phares ou la protection réelle de l'habitacle. L'éclairage est celui natif
-des précipitations ; les unités de vitesse de l'interface sont relatives.
-La version ne modifie ni friction ni matériaux et n'ajoute aucun effet
-sur les vitres, aucune flaque ou éclaboussure de surface.
+Mock-engine tests do not validate C++ bindings, GPU rendering, headlights or
+actual cabin protection. Lighting uses native precipitation behaviour and
+the speed controls use relative units.
 
-La liste détaillée de test en jeu se trouve dans le README.
+The mod changes neither friction nor materials and adds no windshield effects,
+puddles or surface splashes. The detailed in-game checklist is in the README.

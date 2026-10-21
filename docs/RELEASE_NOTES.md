@@ -1,29 +1,25 @@
-# BeamNg.weather 0.2.0 alpha 1
+# BeamNg.weather 0.2.1 alpha 1
 
-Pluie atmosphérique retravaillée et panneau complet pour BeamNG.drive 0.40.x.
+English language update for the atmospheric rain mod targeting BeamNG.drive 0.40.x.
 
-- Trois volumes de pluie avec des tailles, vitesses et distances différentes.
-- Textures originales : 16 variations par couche, transparence progressive et mipmaps.
-- Presets Bruine, Pluie douce, Averse, Déluge et Grain.
-- Trois presets personnels sauvegardés entre les sessions.
-- Huit réglages : intensité, taille, vitesse, turbulence, variations de densité,
-  visibilité, étendue et transition entre intensités.
-- Quatre budgets de 2 400 à 20 000 particules maximum.
-- Options de collisions, influence du vent existant et lumière du ciel.
-- Conservation des réglages de la version 0.1.
+- All interface labels, status messages, tooltips and preset descriptions are in English.
+- Presets are now named Drizzle, Light rain, Shower, Downpour and Squall.
+- README, validation notes, release descriptions and preview artwork are in English.
+- Existing settings and all three saved custom presets remain compatible.
+- Rain behaviour is unchanged from 0.2.0: three layers, original droplet atlases,
+  eight visual controls and four particle budgets from 2,400 to 20,000.
 
-Aucun effet de pare-brise, aucune flaque, aucun changement de friction,
-aucun matériau humide ni son de pluie.
+No windshield effects, puddles, friction changes, wet materials, surface splashes
+or rain audio are included.
 
-**Installation :** remplacer l'ancien `beamng_weather_hashk014.zip` dans `mods`
-du dossier utilisateur actif, sans le décompresser, puis relancer le jeu.
-Le panneau se trouve dans **UI Apps > Ajouter une app > BeamNg.weather**.
-Si l'ancien panneau est trop petit, l'agrandir ou le retirer et le rajouter.
-Faire défiler le panneau pour accéder aux presets personnels.
+**Install:** replace `beamng_weather_hashk014.zip` in the active user folder's
+`mods` directory, without extracting it, then restart the game.
+Open **UI Apps > Add app > BeamNg.weather** for the rain controls.
+Resize an older panel or remove and add it again if it is too small.
+Scroll inside the panel to access advanced settings and custom preset slots.
 
-**Vérifications :** 18 tests sur moteur simulé, pont UI Node, textures et
-archive contrôlés. Panneau testé avec AngularJS 1.5.8 à état de jeu simulé.
-**Rendu et performances dans BeamNG à confirmer par ton test.**
-Cette préversion ne promet pas une simulation physique ou optique de la pluie.
+**Validation:** 18 mock-engine tests, the Node UI bridge, textures and ZIP
+integrity checked. The panel is previewed with AngularJS 1.5.8 and simulated
+game state. **In-game rendering and performance still require testing.**
 
-Le ZIP « Source code » de GitHub n'est pas le mod installable.
+GitHub's automatic **Source code** ZIP is not the installable mod package.

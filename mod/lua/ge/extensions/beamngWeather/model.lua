@@ -1,6 +1,6 @@
 -- Visual settings only; this module never changes vehicle or world physics.
 local M = {}
-M.version = "0.2.0"
+M.version = "0.2.1"
 M.budgets = {low = 2400, medium = 6000, high = 12000, ultra = 20000}
 M.ranges = {
   intensity = {0, 1, 0.65}, dropScale = {0.5, 2, 1}, fallSpeed = {0.4, 1.8, 1},
@@ -10,11 +10,11 @@ M.ranges = {
 local booleans = {enabled = true, collisions = true, wind = true, lighting = true}
 local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting"}
 M.presets = {
-  {id = "drizzle", name = "Bruine", description = "Gouttes fines et chute légère", intensity = 0.26, dropScale = 0.65, fallSpeed = 0.65, turbulence = 0.08, variability = 0.09, contrast = 0.65, volume = 0.85, wind = true, lighting = true},
-  {id = "gentle", name = "Pluie douce", description = "Une pluie régulière et discrète", intensity = 0.46, dropScale = 0.85, fallSpeed = 0.85, turbulence = 0.08, variability = 0.12, contrast = 0.8, volume = 1, wind = true, lighting = true},
-  {id = "shower", name = "Averse", description = "Gouttes marquées, rythme variable", intensity = 0.72, dropScale = 1, fallSpeed = 1.05, turbulence = 0.15, variability = 0.2, contrast = 0.95, volume = 1, wind = true, lighting = true},
-  {id = "downpour", name = "Déluge", description = "Une pluie dense et soutenue", intensity = 1, dropScale = 1.22, fallSpeed = 1.2, turbulence = 0.2, variability = 0.13, contrast = 1, volume = 1.1, wind = true, lighting = true},
-  {id = "squall", name = "Grain", description = "Une averse irrégulière et agitée", intensity = 0.85, dropScale = 1.1, fallSpeed = 1.15, turbulence = 0.52, variability = 0.42, contrast = 0.9, volume = 1.15, wind = true, lighting = true}
+  {id = "drizzle", name = "Drizzle", description = "Fine droplets with a gentle fall", intensity = 0.26, dropScale = 0.65, fallSpeed = 0.65, turbulence = 0.08, variability = 0.09, contrast = 0.65, volume = 0.85, wind = true, lighting = true},
+  {id = "gentle", name = "Light rain", description = "Steady, subtle rainfall", intensity = 0.46, dropScale = 0.85, fallSpeed = 0.85, turbulence = 0.08, variability = 0.12, contrast = 0.8, volume = 1, wind = true, lighting = true},
+  {id = "shower", name = "Shower", description = "Defined droplets with changing density", intensity = 0.72, dropScale = 1, fallSpeed = 1.05, turbulence = 0.15, variability = 0.2, contrast = 0.95, volume = 1, wind = true, lighting = true},
+  {id = "downpour", name = "Downpour", description = "Dense, sustained rainfall", intensity = 1, dropScale = 1.22, fallSpeed = 1.2, turbulence = 0.2, variability = 0.13, contrast = 1, volume = 1.1, wind = true, lighting = true},
+  {id = "squall", name = "Squall", description = "An uneven, turbulent rain shower", intensity = 0.85, dropScale = 1.1, fallSpeed = 1.15, turbulence = 0.52, variability = 0.42, contrast = 0.9, volume = 1.15, wind = true, lighting = true}
 }
 function M.copy(data)
   local result = {}

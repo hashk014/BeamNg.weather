@@ -18,7 +18,7 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
     templateUrl: '/ui/modules/apps/BeamngWeatherHashk014/app.html',
     link: function (scope) {
       var prefix = 'extensions.beamngWeather_hashk014';
-      var labels = {waiting: 'Charge une carte pour voir la pluie.', raining: 'Pluie en cours', stopped: 'Pluie arrêtée', unavailable: 'Effet indisponible : voir le diagnostic.'};
+      var labels = {waiting: 'Load a map to see the rain.', raining: 'Raining', stopped: 'Rain stopped', unavailable: 'Rain unavailable: see the diagnostic below.'};
       var qualityNames = ['low', 'medium', 'high', 'ultra'];
       var booleanFields = ['collisions', 'wind', 'lighting'];
       scope.weather = null;
@@ -26,14 +26,14 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
       scope.edit = {key: null};
       scope.advanced = false;
       scope.controls = [
-        {key: 'intensity', label: 'Intensité', min: 0, max: 1, step: 0.01, unit: 'percent'},
-        {key: 'dropScale', label: 'Taille des gouttes', min: 0.5, max: 2, step: 0.05, unit: 'factor'},
-        {key: 'fallSpeed', label: 'Vitesse de chute', min: 0.4, max: 1.8, step: 0.05, unit: 'factor'},
+        {key: 'intensity', label: 'Intensity', min: 0, max: 1, step: 0.01, unit: 'percent'},
+        {key: 'dropScale', label: 'Droplet size', min: 0.5, max: 2, step: 0.05, unit: 'factor'},
+        {key: 'fallSpeed', label: 'Fall speed', min: 0.4, max: 1.8, step: 0.05, unit: 'factor'},
         {key: 'turbulence', label: 'Turbulence', min: 0, max: 1, step: 0.01, unit: 'percent'},
-        {key: 'variability', label: 'Variations de densité', min: 0, max: 0.6, step: 0.01, unit: 'percent'},
-        {key: 'contrast', label: 'Visibilité des gouttes', min: 0.35, max: 1.5, step: 0.05, unit: 'factor'},
-        {key: 'volume', label: 'Étendue de la pluie', min: 0.65, max: 1.6, step: 0.05, unit: 'factor'},
-        {key: 'transition', label: 'Transition entre intensités', min: 0, max: 5, step: 0.1, unit: 'seconds'}
+        {key: 'variability', label: 'Density variation', min: 0, max: 0.6, step: 0.01, unit: 'percent'},
+        {key: 'contrast', label: 'Droplet visibility', min: 0.35, max: 1.5, step: 0.05, unit: 'factor'},
+        {key: 'volume', label: 'Rain coverage', min: 0.65, max: 1.6, step: 0.05, unit: 'factor'},
+        {key: 'transition', label: 'Intensity transition', min: 0, max: 5, step: 0.1, unit: 'seconds'}
       ];
       function command(method, value) {
         var argument = arguments.length > 1 ? bngApi.serializeToLua(value) : '';
@@ -49,13 +49,13 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
           });
           booleanFields.concat(['quality']).forEach(function (key) { scope.form[key] = state[key]; });
           var active = (state.presets || []).filter(function (preset) { return preset.id === state.preset; })[0];
-          scope.presetDescription = active ? active.description : 'Tes réglages personnels';
+          scope.presetDescription = active ? active.description : 'Your custom settings';
         });
       });
       scope.format = function (control) {
         var value = Number(scope.form[control.key]);
         if (!isFinite(value)) return '…';
-        if (control.unit === 'percent') return Math.round(value * 100) + ' %';
+        if (control.unit === 'percent') return Math.round(value * 100) + '%';
         return value.toFixed(control.unit === 'seconds' ? 1 : 2) + (control.unit === 'seconds' ? ' s' : ' ×');
       };
       scope.apply = function (key) {
