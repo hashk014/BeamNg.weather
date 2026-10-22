@@ -9,11 +9,17 @@ function M.cross(a,b) return M.v(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x
 function M.length(a) return math.sqrt(M.dot(a,a)) end
 function M.unit(a) local n=M.length(a); return n>1e-9 and M.mul(a,1/n) or M.v(0,0,1) end
 function M.project(a,n) return M.sub(a,M.mul(n,M.dot(a,n))) end
+function M.excludedGlass(name)
+  name=(name or ""):lower()
+  return name:find("_int$") or name:find("_int_") or name:find("_in$") or name:find("interior") or name:find("dmg") or name:find("broken")
+    or name:find("mirror") or name:find("headlight") or name:find("taillight") or name:find("lamp")
+    or name:find("foglight") or name:find("rooflight") or name:find("spotlight") or name:find("lightglass")
+    or name:find("signal") or name:find("invisible") or name:find("wiper") or name:find("seal") or name:find("trim")
+    or name:find("handle") or name:find("switch") or name:find("windowbush") or name:find("window_net") or name:find("windownet")
+end
 function M.glassName(name, material)
   name=(name or ""):lower()
-  if name:find("_int$") or name:find("_int_") or name:find("interior") or name:find("dmg") or name:find("broken")
-    or name:find("mirror") or name:find("headlight") or name:find("taillight") or name:find("lamp")
-    or name:find("wiper") or name:find("seal") or name:find("trim") then return false end
+  if M.excludedGlass(name) then return false end
   local label=name.." "..(material or ""):lower()
   return label:find("glass")~=nil or label:find("windshield")~=nil or label:find("windscreen")~=nil
     or label:find("window")~=nil or label:find("backlight")~=nil or label:find("sunroof")~=nil

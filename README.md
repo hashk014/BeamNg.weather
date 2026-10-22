@@ -4,7 +4,9 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.5.0** adds experimental cabin protection and 3D droplets on
+Version **0.5.1** fixes the glass scan abort (`Too many glass triangles`) reported
+in 0.5.0: select actual glass materials, remove repeated geometry and keep dense
+glass within a bounded sampling budget. It retains experimental cabin protection and 3D droplets on
 detected vehicle windows, with motion driven by vehicle speed and direction. The classic gray/orange interface stays in English. Open the settings at:
 **Esc > Mods > BeamNg.weather**. All controls are in English, and existing
 settings and saved presets remain compatible.
@@ -15,7 +17,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.5.0-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.5.1-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -25,7 +27,8 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 Do not install files in the game's Steam directory. The mod ZIP contains
 `art/`, `lua/`, `scripts/`, `shaders/` and `ui/` directly. GitHub's automatic **Source code**
 archives are for developers and are not installable mod packages.
-Keep the filename `beamng_weather_hashk014.zip` when updating.
+Keep only one installed copy, named `beamng_weather_hashk014.zip`, when updating.
+Remove older downloads with suffixes such as `(1)` from the `mods` folder.
 
 ## Open the rain controls
 

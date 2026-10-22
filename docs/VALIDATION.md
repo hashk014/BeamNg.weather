@@ -1,14 +1,20 @@
-# Validation: 0.5.0 experimental release
+# Validation: 0.5.1 experimental release
 
-Date: October 21, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+
+## Reported failure and correction
+
+A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triangles`, with zero detected panes and droplets. This proves the scan abort, but does not identify which mesh/range caused the overflow. The old scanner reproduces the same error in two new synthetic cases: repeated primitive ranges and legitimate high-detail glass. Both pass after the correction.
+
+0.5.1 filters primitives with `vehicle:getMaterialNames()[materialId + 1]`, using the mapping in the installed game's `util/export.lua`, and removes repeated ranges/indexed triangles. It samples glass above 30,000 candidates across all panes rather than aborting. Additional regressions check material filtering, duplicate triangles and missing material-table fallback. Sampling can shorten sliding and is reported in the GUI. Scan counts/failures are logged. No installed vehicle assets are distributed.
 
 ## Evidence and completed checks
 
-- **36 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 35 portable tests and
+- **41 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 40 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Nine new synthetic tests exercise the actual vehicle-effect modules using the
+- Fourteen synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;

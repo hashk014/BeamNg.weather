@@ -23,6 +23,7 @@ function vehicle:getVelocity() return self.velocity end
 function vehicle:getDirectionVector() return vec3(0,1,0) end
 function vehicle:getDirectionVectorUp() return vec3(0,0,1) end
 function vehicle:getRefNodeRotation() return quat() end
+function vehicle:getMaterialNames() return {"test_glass","test_body","test_glass_int","glass_invisible"} end
 function getPlayerVehicle() return vehicle end
 vehicleData={vdata={flexbodies={}}}
 core_vehicle_manager={getVehicleData=function() return vehicleData end}
@@ -60,7 +61,7 @@ local function pane(name,a,b,c,d)
   for _,p in ipairs({a,b,c,d}) do vertices[#vertices+1]=p end
   for _,i in ipairs({0,1,2,0,2,3}) do indices[#indices+1]=vi+i end
   local f={meshName=name,primitivesCount=1}
-  function f:primitivesGet(out) out[0].startIndex=ii;out[0].indexCount=6;out[0].materialId=0;return true end
+  function f:primitivesGet(out) out[0].startIndex=ii;out[0].indexCount=6;out[0].materialId=self.materialId or 0;return true end
   flex[#flex+1]=f
   vehicleData.vdata.flexbodies[#flex]={mesh=name,deformMaterialBase="test_glass"}
 end

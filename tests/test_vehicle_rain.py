@@ -57,6 +57,119 @@ class VehicleRainTests(unittest.TestCase):
           assert(vehicle.velocity.y==0 and registry.mapRain.numDrops==7)
         ''')
 
+    def test_real_materials_override_inherited_glass_label_and_mixed_mesh_names(self):
+        self.run_lua('''
+          local original=GPUMesh.bng_getGPUMesh
+          GPUMesh.bng_getGPUMesh=function()
+            local m=original()
+            -- A named windshield has body material; a generic shell contains glass.
+            m:flexmeshes(0).materialId=1
+            m:flexmeshes(1).meshName="test_combined_shell"
+            -- Window hardware and interior/invisible materials must not count.
+            m:flexmeshes(2).meshName="test_windowhandle"
+            m:flexmeshes(3).materialId=2
+            m:flexmeshes(4).materialId=3
+            return m
+          end
+          advance(100)
+          local state=effects.getState()
+          assert(state.available and state.panels==1 and state.glassTriangles==2)
+          assert(state.glassDrops>0 and state.wetPanels.test_combined_shell)
+          assert(not g.glassName("pickup_desert_window_net_L"))
+          assert(not g.glassName("pickup_foglightglass_R"))
+          assert(not g.glassName("pickup_rollcage_windowbush"))
+          assert(not g.glassName("pickup_windowswitch_R"))
+        ''')
+
+    def test_shared_primitive_ranges_do_not_hit_triangle_limit(self):
+        self.run_lua('''
+          local original=GPUMesh.bng_getGPUMesh
+          GPUMesh.bng_getGPUMesh=function()
+            local m=original();local f=m:flexmeshes(0)
+            local read=f.primitivesGet
+            f.primitivesCount=16000
+            f.primitivesGet=function(self,out)
+              read(self,out)
+              for i=1,15999 do out[i]=out[0] end
+              return true
+            end
+            return m
+          end
+          advance(40)
+          local state=effects.getState()
+          assert(state.available and state.panels==5 and state.glassTriangles==10)
+          assert(not state.sampled and not state.warning and state.glassDrops>0)
+          assert(scans==1 and freed==1)
+        ''')
+
+    def test_high_detail_glass_keeps_all_panes_with_bounded_sampling(self):
+        self.run_lua('''
+          local positions,idx={},{}
+          local function quad(a,b,c,d)
+            local base=#positions
+            for _,p in ipairs({a,b,c,d}) do positions[#positions+1]=p end
+            for _,v in ipairs({0,1,2,0,2,3}) do idx[#idx+1]=base+v end
+          end
+          for x=0,159 do for z=0,99 do
+            local left,right=-1+x/80,-1+(x+1)/80
+            local bottom,top=1+z/100,1+(z+1)/100
+            quad(g.v(left,1,bottom),g.v(right,1,bottom),g.v(right,1,top),g.v(left,1,top))
+          end end
+          local sideStart=#idx
+          quad(g.v(1,-1,1),g.v(1,1,1),g.v(1,1,2),g.v(1,-1,2))
+          GPUMesh.bng_getGPUMesh=function()
+            scans=scans+1
+            local m={verticesCount=#positions,indicesCount=#idx,flexmeshesCount=2,dataIsReady=true}
+            function m:verticesGet(out)
+              for i,p in ipairs(positions) do out[(i-1)*3]=p.x;out[(i-1)*3+1]=p.y;out[(i-1)*3+2]=p.z end
+              return true
+            end
+            function m:indicesGet(out) for i,v in ipairs(idx) do out[i-1]=v end;return true end
+            function m:flexmeshes(i)
+              return {meshName=i==0 and "dense_windshield" or "small_window",primitivesCount=1,
+                primitivesGet=function(_,out)
+                  out[0].startIndex=i==0 and 0 or sideStart
+                  out[0].indexCount=i==0 and sideStart or 6
+                  out[0].materialId=0;return true
+                end}
+            end
+            function m:free() freed=freed+1 end
+            return m
+          end
+          advance(40)
+          local state=effects.getState()
+          assert(state.available and state.sampled and state.panels==2)
+          assert(state.glassTriangles<=30000 and state.glassTriangles>29000)
+          assert(state.glassDrops>0 and state.wetPanels.dense_windshield)
+          assert(state.wetPanels.small_window and state.guardRadius>0)
+          assert(scans==1 and freed==1)
+        ''')
+
+    def test_repeated_triangles_in_different_ranges_are_not_counted_twice(self):
+        self.run_lua('''
+          local original=GPUMesh.bng_getGPUMesh
+          GPUMesh.bng_getGPUMesh=function()
+            local m=original();local read=m.indicesGet
+            m.indicesGet=function(self,out)
+              read(self,out)
+              for i=0,5 do out[i+6]=out[i] end
+              return true
+            end
+            return m
+          end
+          advance(30)
+          local state=effects.getState()
+          assert(state.available and state.panels==4 and state.glassTriangles==8)
+          assert(state.glassDrops>0 and not state.warning)
+        ''')
+
+    def test_unavailable_material_table_keeps_mesh_name_fallback(self):
+        self.run_lua('''
+          vehicle.getMaterialNames=nil
+          advance(30)
+          assert(effects.getState().panels==5 and effects.getState().glassDrops>0)
+        ''')
+
     def test_tunnel_stops_new_glass_drops_and_near_air_rain(self):
         self.run_lua('''
           roof=true; advance(50)

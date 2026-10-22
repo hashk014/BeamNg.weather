@@ -10,6 +10,7 @@ local state={available=false,glassDrops=0,nearDrops=0,guardRadius=0,reservedDrop
 local scanTimer,tick,exposureTimer,credit=0,0,0,0
 local retryDelay=0
 local failureTimer=0
+local lastFailure
 local function live(o) return o and simObjectExists(o) end
 local function freeMeshes()
   if live(group) then group:delete() end
@@ -157,6 +158,8 @@ local function update(config,dt,intensity)
     if not result then if warning~="Detecting vehicle glass…" then retryDelay=3 end;return end
     prepare(result)
     state.available,state.panels,state.warning=true,#geometry.panels,nil
+    state.glassTriangles=#geometry.triangles
+    state.sampled=geometry.sampled
     exposureTimer=1
   end
   local frame=g.frame(vehicle:getDirectionVector(),vehicle:getDirectionVectorUp())
@@ -166,7 +169,8 @@ local function update(config,dt,intensity)
   local incoming=g.sub(g.add(wind,g.v(0,0,-9)),velocity)
   local localCamera=g.localVector(g.sub(camera,pos),frame)
   local radius=g.guardRadius(localCamera,geometry.bounds)
-  state.warning=config.cabinProtection and radius>12 and "Move the camera closer for cabin protection (12 m guard limit)." or nil
+  state.warning=config.cabinProtection and radius>12 and "Move the camera closer for cabin protection (12 m guard limit)."
+    or geometry.sampled and "High-detail glass: using a bounded surface sample. Sliding across unsampled triangles may be shorter." or nil
   radius=config.cabinProtection and radius<=12 and radius or 0
   -- The replacement mesh must succeed before the native guard is enabled.
   makeMeshes()
@@ -202,6 +206,8 @@ function M.update(config,dt,intensity)
   if not ok then
     M.clear()
     state.warning="Vehicle rain unavailable: "..tostring(err)
+    if type(log)=="function" and state.warning~=lastFailure then log("W","beamngWeather_glass",state.warning) end
+    lastFailure=state.warning
     failureTimer=3
   end
 end
