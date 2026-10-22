@@ -1,6 +1,14 @@
-# Validation: 0.5.2 experimental release
+# Validation: 0.5.3 experimental release
 
 Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+
+## 0.5.3 coordinate and transparency correction
+
+The 0.5.2 game log reports 6 detected glass meshes and 274 triangles, with imported glass textures and no repeat of the mod's previous namespace/missing-material errors. The user reports visible beads at the rear seat instead of on the glass, with rectangular nearby rain when driving and normal rain outside the vehicle.
+
+The installed `util/export.lua` passes GPU vertex buffers directly to glTF POSITION accessors and converts vehicle directions and prop translations to `(x, z, -y)`. The mod previously interpreted those buffers as BeamNG Z-up. 0.5.3 applies the inverse `(x, -z, y)` before the vehicle-local transform, for both droplets and cabin bounds. The fixture now models that export convention, and a regression verifies known glass planes and the cabin envelope in three vehicle orientations. The previous decoder fails the new check. This is source-derived coordinate evidence; corrected in-game placement still needs validation.
+
+Both PBR particle materials now use explicit grayscale opacity maps, as described in [BeamNG materials v1.5](https://documentation.beamng.com/modding/materials/materials_1.5/). The generated RGB mask equals the original color texture's alpha pixel-for-pixel and has an opaque alpha channel of its own. Tests check references, transparent borders, nonzero silhouettes and deterministic encoding. Original color/normal assets are unchanged.
 
 ## 0.5.2 runtime evidence and correction
 
@@ -18,11 +26,11 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 
 ## Evidence and completed checks
 
-- **44 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 43 portable tests and
+- **46 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 45 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Sixteen synthetic tests exercise the actual vehicle-effect modules using the
+- Eighteen synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;
@@ -40,7 +48,7 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 - Native guard constants reuse the renderer's fade fields. Both revised HLSL
   stages compile with Windows SDK FXC (SM5) and DXC (SM6). This is offline
   compilation, not proof of runtime shader bindings or rendering.
-- Original four BC3 DDS and two glass PNG textures regenerate identically.
+- Original four BC3 DDS, two glass PNG and two opacity PNG textures regenerate identically.
   Independent image decoding checks alpha, atlas variants, mipmaps and normals.
 - Vue settings page rendered in a browser using the installed game's Vue build,
   with simulated state. New glass/cabin controls checked through the visible UI.

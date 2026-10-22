@@ -123,7 +123,7 @@ class VehicleRainTests(unittest.TestCase):
             scans=scans+1
             local m={verticesCount=#positions,indicesCount=#idx,flexmeshesCount=2,dataIsReady=true}
             function m:verticesGet(out)
-              for i,p in ipairs(positions) do out[(i-1)*3]=p.x;out[(i-1)*3+1]=p.y;out[(i-1)*3+2]=p.z end
+              for i,p in ipairs(positions) do out[(i-1)*3]=p.x;out[(i-1)*3+1]=p.z;out[(i-1)*3+2]=-p.y end
               return true
             end
             function m:indicesGet(out) for i,v in ipairs(idx) do out[i-1]=v end;return true end
@@ -291,6 +291,57 @@ class VehicleRainTests(unittest.TestCase):
             assert(registry.beamngWeather_hashk014_glassDrops:getClassName()=="Material")
           end
         ''')
+
+    def test_gltf_snapshot_axes_place_beads_on_windows_and_cabin_bounds_when_rotated(self):
+        self.run_lua('''
+          -- GPUMesh uses glTF Y-up; do not test only synthetic Z-up inputs.
+          local mapped=g.fromGpuVertex(2,4,-3)
+          assert(mapped.x==2 and mapped.y==3 and mapped.z==4)
+          for _,pose in ipairs({
+            {forward=g.v(0,1,0),up=g.v(0,0,1)},
+            {forward=g.v(1,0,0),up=g.v(0,0,1)},
+            {forward=g.v(0,-1,0),up=g.v(0.5,0,math.sqrt(0.75))}
+          }) do
+            effects.clear()
+            vehicle.getDirectionVector=function() return pose.forward end
+            vehicle.getDirectionVectorUp=function() return pose.up end
+            local frame=g.frame(pose.forward,pose.up)
+            cameraPosition=g.add(vehicle.pos,g.worldVector(g.v(0,0,1.5),frame))
+            local adapter=require("ge/extensions/beamngWeather/glassGeometry")
+            local data,warning=adapter.poll(vehicle,vehicleData,0.05)
+            assert(data,warning)
+            local b=data.bounds
+            assert(math.abs(b.lo.x+1)<0.0001 and math.abs(b.hi.x-1)<0.0001)
+            assert(math.abs(b.lo.y+1)<0.0001 and math.abs(b.hi.y-1)<0.0001)
+            assert(math.abs(b.lo.z-0.35)<0.0001 and math.abs(b.hi.z-2)<0.0001)
+            advance(50)
+            local part=registry.beamngWeather_hashk014_glassDropsMesh.mesh
+            assert(part and #part.verts>0)
+            for i=1,#part.verts,4 do
+              local center=g.mul(g.add(g.add(part.verts[i],part.verts[i+1]),g.add(part.verts[i+2],part.verts[i+3])),0.25)
+              local p=g.localVector(center,frame)
+              local distance=math.min(math.abs(p.x-1),math.abs(p.x+1),math.abs(p.z-2),
+                math.abs(p.y+0.3*p.z-1.3)/math.sqrt(1.09),math.abs(p.y-0.3*p.z+1.3)/math.sqrt(1.09))
+              assert(distance<0.0021,"Droplet is off the actual glass plane")
+              assert(p.z>=0.99 and p.z<=2.01,"Droplet is inside the seating area")
+            end
+          end
+        ''')
+
+    def test_pbr_materials_have_explicit_grayscale_opacity_matching_droplet_alpha(self):
+        folder=ROOT/'mod/art/beamng_weather_hashk014'
+        materials=json.loads((folder/'surfaces.materials.json').read_text())
+        for material in materials.values():
+            stage=material['Stages'][0]
+            with Image.open(ROOT/'mod'/stage['baseColorMap']) as color, Image.open(ROOT/'mod'/stage['opacityMap']) as opacity:
+                alpha=color.convert('RGBA').getchannel('A')
+                self.assertEqual(opacity.size,color.size)
+                for channel in ('R','G','B'):
+                    self.assertEqual(opacity.getchannel(channel).tobytes(),alpha.tobytes())
+                self.assertEqual(opacity.getchannel('A').getextrema(),(255,255))
+                self.assertEqual(opacity.getpixel((0,0))[:3],(0,0,0))
+                self.assertGreater(opacity.getchannel('R').getextrema()[1],100)
+                self.assertTrue(0<stage['opacityFactor']<=1)
 
     def test_missing_material_stops_surface_meshes_before_guard_or_fallback_rectangles(self):
         self.run_lua('''

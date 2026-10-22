@@ -4,10 +4,10 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.5.2** fixes a material/object name collision that caused missing
-window droplets and untextured rectangles. It also replaces the negative cabin
-guard value with a positive encoding for the native precipitation shader.
-Experimental cabin protection and speed-dependent 3D window droplets remain.
+Version **0.5.3** converts the vehicle GPU snapshot from glTF Y-up to BeamNG
+Z-up before placing window beads and computing the cabin envelope. It also adds
+explicit PBR opacity masks for glass beads and nearby airborne rain, addressing
+the reported seat-area droplets and rectangular rain when driving.
 The classic gray/orange interface stays in English. Open the settings at:
 **Esc > Mods > BeamNg.weather**. All controls are in English, and existing
 settings and saved presets remain compatible.
@@ -18,7 +18,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.5.2-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.5.3-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -75,11 +75,11 @@ and transition duration remain global.
 ### Native clouds
 
 **Follow rain intensity** is the default. Existing native `CloudLayer` objects use
-the native **2.4–3** coverage range as rain intensity rises. The previous
+the native **2.4â€“3** coverage range as rain intensity rises. The previous
 0.4.0 release incorrectly treated 1 as the maximum; BeamNG's own environment
 panel uses a maximum of 3. Choosing another rain preset updates
 cloud cover immediately in automatic mode. **Manual cloud cover** lets you set
-coverage from 0% to 100%, mapped to native 0–3; **Keep map settings** releases control of the sky.
+coverage from 0% to 100%, mapped to native 0â€“3; **Keep map settings** releases control of the sky.
 Percentages describe the native setting range, not measured sky occlusion.
 Stopping rain, setting intensity to zero, ending the map or unloading the mod
 restores the previous cloud coverage. Native cloud edits observed while the mod

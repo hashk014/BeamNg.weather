@@ -72,7 +72,9 @@ local function decode(mesh,vehicle,data)
   local lookup,seenTriangles={},{}
   local function vertex(index)
     if index>=count then error("Invalid glass vertex index") end
-    if not lookup[index] then lookup[index]=g.localVector(g.v(vertices[index*3],vertices[index*3+1],vertices[index*3+2]),frame) end
+    if not lookup[index] then
+      lookup[index]=g.localVector(g.fromGpuVertex(vertices[index*3],vertices[index*3+1],vertices[index*3+2]),frame)
+    end
     return lookup[index]
   end
   local duplicateTriangles=0
@@ -119,6 +121,8 @@ local function decode(mesh,vehicle,data)
   local sampled=candidateCount>triangleBudget
   diagnostic("I",string.format("Vehicle %s: %d glass meshes, %d/%d triangles, %d duplicate ranges, %d duplicate triangles, %d non-window primitives rejected, sampled=%s",
     tostring(vehicle:getID()),#panels,#triangles,candidateCount,duplicateRanges,duplicateTriangles,rejectedPrimitives,tostring(sampled)))
+  diagnostic("I",string.format("Z-up cabin bounds: (%.3f, %.3f, %.3f) to (%.3f, %.3f, %.3f)",
+    bounds.lo.x,bounds.lo.y,bounds.lo.z,bounds.hi.x,bounds.hi.y,bounds.hi.z))
   return {triangles=triangles,panels=panels,bounds=bounds,sampled=sampled,sourceTriangles=candidateCount}
 end
 function M.poll(vehicle,data,dt)

@@ -90,7 +90,14 @@ meshReady=true
 GPUMesh={bng_getGPUMesh=function()
   scans=scans+1
   local m={verticesCount=#vertices,indicesCount=#indices,flexmeshesCount=#flex,dataIsReady=meshReady}
-  function m:verticesGet(out) for i,p in ipairs(vertices) do out[(i-1)*3]=p.x;out[(i-1)*3+1]=p.y;out[(i-1)*3+2]=p.z end;return true end
+  function m:verticesGet(out)
+    local frame=g.frame(vehicle:getDirectionVector(),vehicle:getDirectionVectorUp())
+    for i,localPoint in ipairs(vertices) do
+      local p=g.worldVector(localPoint,frame)
+      out[(i-1)*3]=p.x;out[(i-1)*3+1]=p.z;out[(i-1)*3+2]=-p.y
+    end
+    return true
+  end
   function m:indicesGet(out) for i,v in ipairs(indices) do out[i-1]=v end;return true end
   function m:flexmeshes(i) return flex[i+1] end
   function m:free() assert(not self.freed);self.freed=true;freed=freed+1 end

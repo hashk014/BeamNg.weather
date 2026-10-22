@@ -1,5 +1,6 @@
 """Original 4x4 rain atlases: legacy DXT5/BC3 DDS with full mip chains."""
 from pathlib import Path
+from io import BytesIO
 import argparse
 import math
 import random
@@ -99,10 +100,15 @@ def glass_texture(normal=False):
                     value = round(110+100*highlight+40*rim)
                     rgba = (value, min(255,value+10), min(255,value+18), round((18+100*rim+120*highlight)*edge*fade))
                 pixels[(frame%4)*cell+x, (frame//4)*cell+y] = rgba
+    return encode_png(image)
+
+
+def encode_png(image):
     # Store explicit unfiltered rows and uncompressed DEFLATE blocks. Pillow's
     # native compression backends can emit different PNG bytes on Windows/Linux.
-    rgba = image.tobytes()
-    raw = b"".join(b"\0"+rgba[y*size*4:(y+1)*size*4] for y in range(size))
+    width,height = image.size
+    rgba = image.convert("RGBA").tobytes()
+    raw = b"".join(b"\0"+rgba[y*width*4:(y+1)*width*4] for y in range(height))
     stream = bytearray(b"\x78\x01")
     for start in range(0,len(raw),65535):
         block = raw[start:start+65535]
@@ -111,11 +117,18 @@ def glass_texture(normal=False):
     stream += struct.pack(">I",zlib.adler32(raw)&0xffffffff)
     def chunk(kind,data):
         return struct.pack(">I",len(data))+kind+data+struct.pack(">I",zlib.crc32(kind+data)&0xffffffff)
-    return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",size,size,8,6,0,0,0))+chunk(b"IDAT",bytes(stream))+chunk(b"IEND",b"")
+    return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",width,height,8,6,0,0,0))+chunk(b"IDAT",bytes(stream))+chunk(b"IEND",b"")
+
+
+def opacity_texture(source):
+    # PBR opacity samples a grayscale map, not the base-color texture's alpha.
+    with Image.open(BytesIO(source)) as image:
+        alpha=image.convert("RGBA").getchannel("A")
+        return encode_png(Image.merge("RGBA",(alpha,alpha,alpha,Image.new("L",image.size,255))))
 
 
 def outputs():
-    return {
+    result = {
         "rain_fine.color.dds": atlas(1401, 102, 0.8, 0.7),
         "rain_body.color.dds": atlas(1402, 142, 1, 1.1),
         "rain_distant.color.dds": atlas(1403, 83, 0.9, 0.95),
@@ -123,6 +136,9 @@ def outputs():
         "glass_drop.color.png": glass_texture(),
         "glass_drop.normal.png": glass_texture(normal=True),
     }
+    result["glass_drop.opacity.data.png"] = opacity_texture(result["glass_drop.color.png"])
+    result["rain_body.opacity.data.png"] = opacity_texture(result["rain_body.color.dds"])
+    return result
 
 
 def main():

@@ -1,14 +1,16 @@
-# BeamNg.weather 0.5.2 alpha 1
+# BeamNg.weather 0.5.3 alpha 1
 
-Fix missing window droplets and untextured rectangles after the 0.5.1 glass scan fix, and correct the native cabin guard encoding.
+Address droplets appearing over the rear seat instead of the windows, cabin rain, and rectangular nearby particles while driving.
 
-- Give render meshes distinct names from their materials. The actual 0.5.1 game log reported a Material/ProceduralMesh namespace collision followed by repeated missing-material errors. It also confirmed successful detection of 7 glass meshes and 878 triangles.
-- Check that both surface materials exist and are Material objects before creating visual meshes or activating cabin protection. A missing material now produces a diagnostic instead of untextured fallback geometry.
-- Encode the cabin guard using positive fade values (`fadeDist > fadeDistEnd`). The previous negative value conflicts with the precipitation field's PositiveFloat validator. Update the original vertex shader to decode the guard and register a new shader version.
-- Strengthen the synthetic engine boundary: load the actual surface material definitions, enforce shared object/material names, require valid mesh materials and apply positive-float validation. The prior tests omitted these behaviors and missed both defects.
+- Convert GPU mesh export coordinates from glTF Y-up to BeamNG Z-up before transforming to the vehicle frame: `(x, y, z)` becomes `(x, -z, y)`. The same corrected geometry now supplies glass particle positions and the cabin exclusion envelope. The installed native glTF exporter consumes the GPU vertices directly and exports vehicle directions in the corresponding Y-up convention.
+- Add explicit grayscale `opacityMap` textures for the PBR glass and near-rain materials. Their RGB channels now contain the droplet silhouette, matching the color texture's alpha. A base-color alpha channel alone was not a complete PBR opacity setup.
+- Preserve material-name separation and the positive native guard encoding from 0.5.2. Log the converted cabin bounds for further diagnosis.
+- Extend the synthetic GPU boundary to return glTF coordinates. Check glass-plane attachment and cabin bounds for translated, turned and rolled vehicles. The previous decoder fails this new regression. Check every opacity pixel against the source alpha and verify both materials reference the maps.
 
-**Install:** fully close BeamNG before replacing the old mod ZIP. Keep only `beamng_weather_hashk014.zip` in the active user folder's `mods` directory; remove older `(1)`/`(2)` copies. Restart the game to clear the previous material namespace conflict. Load a closed-roof car and let rain run outside the Escape menu before checking the windshield, side glass and cabin.
+**Install:** fully close BeamNG, replace the previous mod ZIP with this one, keep only one installed copy, and restart. Load a closed-roof vehicle. Let rain run outside Escape, then check the windshield, side windows, rear-seat area and nearby airborne rain while driving and after leaving the vehicle.
 
-**Validation:** 44 local Python/LuaJIT tests, both Node UI checks, archive verification and SM5/SM6 vertex/pixel shader compilation pass. CI runs 43 portable tests and skips one installed-game integration. The old renderer reproduces the namespace collision with the strengthened test boundary. These checks do not confirm the corrected appearance or cabin exclusion in a running game; an in-game retest is still needed.
+**Validation:** 46 local Python/LuaJIT tests and both Node UI checks pass; all eight texture outputs regenerate deterministically and the ZIP matches the source. CI runs 45 portable tests and skips the installed-game integration. The user's 0.5.2 log confirms successful glass detection without the earlier missing-material errors, and their visual report identifies the remaining placement/transparency symptoms. The corrected 0.5.3 appearance and cabin exclusion still need an in-game retest; synthetic geometry tests are not GPU rendering evidence.
 
-Existing limits remain: conservative cabin envelope, experimental glass/pose rendering and damage handling, no wiper clearing, puddles or friction changes.
+Reference for opacity: [BeamNG materials v1.5](https://documentation.beamng.com/modding/materials/materials_1.5/).
+
+The cabin envelope and glass renderer remain experimental. No wiper clearing, road wetness, puddles or friction changes are added.

@@ -30,6 +30,9 @@ function M.frame(forward,up)
   return {right=r,forward=f,up=M.unit(M.cross(r,f))}
 end
 function M.localVector(p,f) return M.v(M.dot(p,f.right),M.dot(p,f.forward),M.dot(p,f.up)) end
+-- GPUMesh supplies glTF coordinates: (BeamNG x, BeamNG z, -BeamNG y).
+-- ProceduralMesh and vehicle/camera vectors use BeamNG's Z-up coordinates.
+function M.fromGpuVertex(x,y,z) return M.v(x,-z,y) end
 function M.worldVector(p,f) return M.add(M.add(M.mul(f.right,p.x),M.mul(f.forward,p.y)),M.mul(f.up,p.z)) end
 function M.bounds(points)
   local lo,hi=M.v(math.huge,math.huge,math.huge),M.v(-math.huge,-math.huge,-math.huge)

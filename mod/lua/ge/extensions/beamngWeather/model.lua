@@ -1,6 +1,6 @@
 -- Visual settings only; this module never changes vehicle or world physics.
 local M = {}
-M.version = "0.5.2"
+M.version = "0.5.3"
 -- BeamNG 0.40's native environment panel uses 0..3, not 0..1.
 M.cloudCoverageMax = 3
 M.budgets = {low = 2400, medium = 6000, high = 12000, ultra = 20000}
