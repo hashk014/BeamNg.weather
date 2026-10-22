@@ -35,6 +35,8 @@ function createObject(class)
     function o:createMesh(lods)
       assert(self.collisionType=="None", "Visual meshes must not add physical colliders")
       self.mesh=lods[1][1]
+      local material=registry[self.mesh.material]
+      assert(material and material:getClassName()=="Material","Mesh material must resolve to a Material")
       for _,f in ipairs(self.mesh.faces) do
         assert(f.v>=0 and f.v<#self.mesh.verts and f.n>=0 and f.n<#self.mesh.normals and f.u>=0 and f.u<#self.mesh.uvs)
       end
@@ -45,7 +47,17 @@ function createObject(class)
 end
 local originalLoad=loadJsonMaterialsFile
 function loadJsonMaterialsFile(path)
-  if path:find("surfaces.materials",1,true) then return end
+  if path:find("surfaces.materials",1,true) then
+    if failSurfaceMaterials then return end
+    for name,data in pairs(testSurfaceMaterials) do
+      if not registry[name] then
+        local material=createObject(data.class)
+        material.definition=data
+        material:registerObject(name)
+      end
+    end
+    return
+  end
   originalLoad(path)
 end
 roof=false

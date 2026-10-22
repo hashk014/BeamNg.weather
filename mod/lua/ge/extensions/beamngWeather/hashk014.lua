@@ -53,7 +53,11 @@ local function setLayerParameters(obj, spec)
   obj.minSpeed, obj.maxSpeed = spec.minSpeed * config.fallSpeed, spec.maxSpeed * config.fallSpeed
   obj.minMass, obj.maxMass = spec.mass, spec.mass * 1.45
   local guard = vehicleRain.getState().guardRadius
-  obj.fadeDist, obj.fadeDistEnd = guard > 0 and -guard or spec.fade * config.volume, spec.fadeEnd * config.volume
+  local fadeEnd = spec.fadeEnd * config.volume
+  -- Precipitation validates these as positive floats. Encode the guard above
+  -- fadeDistEnd; negative fadeDist is clamped by the engine.
+  obj.fadeDistEnd = fadeEnd
+  obj.fadeDist = guard > 0 and fadeEnd + guard or spec.fade * config.volume
   obj.useWind, obj.useLighting = config.wind, config.lighting
   obj.useTurbulence = config.turbulence > 0
   obj.maxTurbulence, obj.turbulenceSpeed = 0.15 * config.turbulence, 0.12 + 0.18 * config.turbulence
@@ -83,7 +87,7 @@ end
 local function createRain()
   -- Without a precipitation shader, the native fallback ignores lighting and
   -- distance fading. Use original standalone shaders without legacy macros.
-  if not scenetree.findObject(tag .. "_shader_v3") then
+  if not scenetree.findObject(tag .. "_shader_v4") then
     local shader = createObject("ShaderData")
     if not shader then error("Cannot create rain shader") end
     shader.canSave = false
@@ -91,7 +95,7 @@ local function createRain()
     shader.DXPixelShaderFile = "shaders/beamng_weather_hashk014/rainP.hlsl"
     shader.pixVersion = 5
     shader:setField("samplerNames", 0, "$diffuseMap")
-    shader:registerObject(tag .. "_shader_v3")
+    shader:registerObject(tag .. "_shader_v4")
     if not live(shader) then error("Cannot register rain shader") end
   end
   local missing = false
@@ -197,7 +201,7 @@ local function onUpdate(dtReal, dtSim)
     for i, obj in ipairs(layers) do
       local fade = definitions[i].fade
       if definitions[i].id == "distant" then fade = coverage.getState().fade or fade end
-      if live(obj) then obj.fadeDist = guard > 0 and -guard or fade * config.volume end
+      if live(obj) then obj.fadeDist = guard > 0 and obj.fadeDistEnd + guard or fade * config.volume end
     end
   end
   clock, healthTimer, visualTimer = clock + dt, healthTimer + real, visualTimer + dt

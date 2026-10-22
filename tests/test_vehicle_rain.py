@@ -1,5 +1,6 @@
 """Synthetic 3D integration, using the native GPU/mesh API shapes; no GPU rendering."""
 import unittest
+import json
 from pathlib import Path
 from lupa.luajit21 import LuaRuntime
 from PIL import Image
@@ -12,6 +13,7 @@ class VehicleRainTests(unittest.TestCase):
     def setUp(self):
         self.lua=LuaRuntime(unpack_returned_tuples=True)
         self.lua.globals().moduleRoot=LUA.as_posix()
+        self.lua.globals().testSurfaceMaterials=self.lua.table_from(json.loads((ROOT/'mod/art/beamng_weather_hashk014/surfaces.materials.json').read_text()),recursive=True)
         self.lua.execute('package.path=moduleRoot.."/?.lua;"..package.path')
         self.lua.execute((ROOT/'tests/engine_stub.lua').read_text(encoding='utf-8'))
         self.lua.execute((ROOT/'tests/vehicle_stub.lua').read_text(encoding='utf-8'))
@@ -46,14 +48,14 @@ class VehicleRainTests(unittest.TestCase):
           advance(30)
           local state=effects.getState()
           assert(state.nearDrops>0 and state.reservedDrops<=300)
-          local part=registry.beamngWeather_hashk014_nearDrops.mesh
+          local part=registry.beamngWeather_hashk014_nearDropsMesh.mesh
           local box={lo=g.v(-1,-1,0.35),hi=g.v(1,1,2)}
           for i=1,#part.verts,4 do
             local center=g.mul(g.add(g.add(part.verts[i],part.verts[i+1]),g.add(part.verts[i+2],part.verts[i+3])),0.25)
             assert(not g.contains(center,box,0.09))
           end
-          assert(registry.beamngWeather_hashk014_nearDrops.collisionType=="None")
-          assert(registry.beamngWeather_hashk014_glassDrops.collisionType=="None")
+          assert(registry.beamngWeather_hashk014_nearDropsMesh.collisionType=="None")
+          assert(registry.beamngWeather_hashk014_glassDropsMesh.collisionType=="None")
           assert(vehicle.velocity.y==0 and registry.mapRain.numDrops==7)
         ''')
 
@@ -176,7 +178,7 @@ class VehicleRainTests(unittest.TestCase):
           local state=effects.getState()
           assert(state.available and state.glassDrops==0)
           local function noRainBelowRoof()
-            local part=registry.beamngWeather_hashk014_nearDrops.mesh
+            local part=registry.beamngWeather_hashk014_nearDropsMesh.mesh
             if part then
               for i=1,#part.verts,4 do
                 local z=(part.verts[i].z+part.verts[i+1].z+part.verts[i+2].z+part.verts[i+3].z)/4
@@ -250,8 +252,8 @@ class VehicleRainTests(unittest.TestCase):
     def test_glass_follows_pose_between_mesh_updates_while_air_stays_in_world_space(self):
         self.run_lua('''
           advance(20)
-          local glass=registry.beamngWeather_hashk014_glassDrops
-          local air=registry.beamngWeather_hashk014_nearDrops
+          local glass=registry.beamngWeather_hashk014_glassDropsMesh
+          local air=registry.beamngWeather_hashk014_nearDropsMesh
           local oldAirX=air.position.x
           local builds=glass.builds
           vehicle.pos=g.v(11,20,0);cameraPosition=g.v(11,20,1.5)
@@ -271,6 +273,38 @@ class VehicleRainTests(unittest.TestCase):
             self.assertLess(im.crop((192,192,256,256)).getchannel('A').getextrema()[1],im.crop((0,0,64,64)).getchannel('A').getextrema()[1])
         with Image.open(folder/'glass_drop.normal.png') as im:
             self.assertGreater(im.getchannel('R').getextrema()[1]-im.getchannel('R').getextrema()[0],150)
+
+    def test_material_names_survive_mesh_creation_reset_and_cleanup(self):
+        self.run_lua('''
+          for cycle=1,3 do
+            advance(30)
+            local glass=registry.beamngWeather_hashk014_glassDropsMesh
+            local air=registry.beamngWeather_hashk014_nearDropsMesh
+            assert(glass and air and glass.mesh and air.mesh)
+            for _,mesh in ipairs({glass,air}) do
+              local material=registry[mesh.mesh.material]
+              assert(material:getClassName()=="Material" and material.name~=mesh.name)
+              assert(material.definition.translucent and not material.definition.translucentZWrite)
+            end
+            effects.clear()
+            assert(not registry.beamngWeather_hashk014_glassDropsMesh)
+            assert(registry.beamngWeather_hashk014_glassDrops:getClassName()=="Material")
+          end
+        ''')
+
+    def test_missing_material_stops_surface_meshes_before_guard_or_fallback_rectangles(self):
+        self.run_lua('''
+          failSurfaceMaterials=true
+          advance(3)
+          local state=effects.getState()
+          assert(state.warning:find("Rain material unavailable"))
+          assert(state.guardRadius==0 and state.glassDrops==0)
+          assert(not registry.beamngWeather_hashk014_glassDropsMesh)
+          assert(not registry.beamngWeather_hashk014_surfaces)
+          failSurfaceMaterials=false
+          advance(100)
+          assert(effects.getState().glassDrops>0 and effects.getState().guardRadius>0)
+        ''')
 
 
 if __name__=='__main__':

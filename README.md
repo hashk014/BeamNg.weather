@@ -4,10 +4,11 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.5.1** fixes the glass scan abort (`Too many glass triangles`) reported
-in 0.5.0: select actual glass materials, remove repeated geometry and keep dense
-glass within a bounded sampling budget. It retains experimental cabin protection and 3D droplets on
-detected vehicle windows, with motion driven by vehicle speed and direction. The classic gray/orange interface stays in English. Open the settings at:
+Version **0.5.2** fixes a material/object name collision that caused missing
+window droplets and untextured rectangles. It also replaces the negative cabin
+guard value with a positive encoding for the native precipitation shader.
+Experimental cabin protection and speed-dependent 3D window droplets remain.
+The classic gray/orange interface stays in English. Open the settings at:
 **Esc > Mods > BeamNg.weather**. All controls are in English, and existing
 settings and saved presets remain compatible.
 
@@ -17,7 +18,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.5.1-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.5.2-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.

@@ -1,8 +1,16 @@
-# Validation: 0.5.1 experimental release
+# Validation: 0.5.2 experimental release
 
 Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
 
-## Reported failure and correction
+## 0.5.2 runtime evidence and correction
+
+The 0.5.1 game log confirms 7 glass meshes and 878 triangles, followed by a namespace-parent collision between Material and ProceduralMesh named `beamngWeather_hashk014_glassDrops`, then repeated missing-material errors. 0.5.2 gives both procedural meshes explicit `Mesh` suffixes and verifies Material objects before creating geometry. The prior test loader ignored the surface materials, so its uniqueness assertion could not detect the collision. It now loads the actual JSON definitions and checks material resolution during every synthetic mesh upload. The old renderer reproduces the collision under this boundary.
+
+The Torque3D reference `Precipitation` source declares `fadeDist` and `fadeDistEnd` using `CommonValidators::PositiveFloat`. The old negative guard encoding was incompatible with that constraint. The new encoding uses `fadeDist = fadeDistEnd + guardRadius`; the original shader decodes the positive difference. Tests now emulate this validation and cover guard restoration across volume changes and cabin protection toggling. This source-based diagnosis is consistent with the reported cabin rain; actual 0.5.2 native field binding and rendered exclusion still await gameplay validation.
+
+New regressions check material/mesh identity across resets, missing-material fallback, and positive guard values. Both shader stages compile with FXC SM5 and DXC SM6. No new in-game rendering claim is made.
+
+## Earlier scan failure and correction
 
 A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triangles`, with zero detected panes and droplets. This proves the scan abort, but does not identify which mesh/range caused the overflow. The old scanner reproduces the same error in two new synthetic cases: repeated primitive ranges and legitimate high-detail glass. Both pass after the correction.
 
@@ -10,11 +18,11 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 
 ## Evidence and completed checks
 
-- **41 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 40 portable tests and
+- **44 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 43 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Fourteen synthetic tests exercise the actual vehicle-effect modules using the
+- Sixteen synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;

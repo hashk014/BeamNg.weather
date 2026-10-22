@@ -55,6 +55,16 @@ core_environment = {
 function createObject(class)
   nextID = nextID + 1
   local obj = {class = class, children = {}, id = nextID}
+  if class == "Precipitation" then
+    local fadeFields={}
+    setmetatable(obj,{
+      __index=function(_,key) return fadeFields[key] end,
+      __newindex=function(t,key,value)
+        if key=="fadeDist" or key=="fadeDistEnd" then fadeFields[key]=math.max(0,value)
+        else rawset(t,key,value) end
+      end
+    })
+  end
   function obj:getID() return self.id end
   function obj:getClassName() return self.class end
   function obj:setHidden(value) self.hidden = value end

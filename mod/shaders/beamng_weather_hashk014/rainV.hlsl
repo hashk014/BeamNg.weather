@@ -25,7 +25,9 @@ VertexOutput main(VertexInput input)
     output.position = mul(modelview, float4(input.position, 1.0));
     output.uv = input.uv;
     float cameraDistance = distance(cameraPos, input.position);
-    float guardRadius = max(0.0, -fadeStartEnd.x);
+    // Both native fade fields are nonnegative. Start > end encodes the
+    // camera guard as their difference; ordinary start < end keeps far fading.
+    float guardRadius = max(0.0, fadeStartEnd.x - fadeStartEnd.y);
     output.nearMask = guardRadius > 0.0 ? cameraDistance - guardRadius : 1.0;
     float fadeStart = guardRadius > 0.0 ? fadeStartEnd.y * 0.55 : fadeStartEnd.x;
     float fade = 1.0;

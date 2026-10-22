@@ -21,6 +21,7 @@ class RainTests(unittest.TestCase):
         self.lua.execute('package.path = moduleRoot .. "/?.lua;" .. package.path')
         data = json.loads((MOD / "art/beamng_weather_hashk014/rain.datablocks.json").read_text())
         self.lua.globals().testDatablocks = self.lua.table_from(data, recursive=True)
+        self.lua.globals().testSurfaceMaterials = self.lua.table_from(json.loads((MOD/'art/beamng_weather_hashk014/surfaces.materials.json').read_text()), recursive=True)
         self.lua.execute((ROOT / "tests/engine_stub.lua").read_text(encoding="utf-8"))
         self.mod = self.lua.execute(SOURCE.read_text(encoding="utf-8"))
         self.lua.globals().extension = self.mod
@@ -79,8 +80,8 @@ class RainTests(unittest.TestCase):
           assert(registry.beamngWeather_hashk014_fine.position == cameraPosition)
           assert(registry.beamngWeather_hashk014_fine.followCam)
           assert(registry.mapRain.numDrops == 7)
-          assert(registry.beamngWeather_hashk014_shader_v3.DXVertexShaderFile == "shaders/beamng_weather_hashk014/rainV.hlsl")
-          assert(registry.beamngWeather_hashk014_shader_v3.DXPixelShaderFile == "shaders/beamng_weather_hashk014/rainP.hlsl")
+          assert(registry.beamngWeather_hashk014_shader_v4.DXVertexShaderFile == "shaders/beamng_weather_hashk014/rainV.hlsl")
+          assert(registry.beamngWeather_hashk014_shader_v4.DXPixelShaderFile == "shaders/beamng_weather_hashk014/rainP.hlsl")
           extension.onUpdate(10)
           assert(rainObjectCount() == 3)
         ''')
@@ -315,7 +316,11 @@ class RainTests(unittest.TestCase):
           for i=1,30 do extension.onUpdate(0.05,0.05) end
           local state=extension.getState()
           assert(state.vehicleRain.available and state.vehicleRain.guardRadius>0)
-          assert(registry.beamngWeather_hashk014_fine.fadeDist<0)
+          for _,name in ipairs({"fine","body","distant"}) do
+            local layer=registry["beamngWeather_hashk014_"..name]
+            assert(layer.fadeDist>layer.fadeDistEnd)
+            assert(math.abs(layer.fadeDist-layer.fadeDistEnd-state.vehicleRain.guardRadius)<0.00001)
+          end
           local native=registry.beamngWeather_hashk014_fine.numDrops+registry.beamngWeather_hashk014_body.numDrops+registry.beamngWeather_hashk014_distant.numDrops
           assert(native+state.vehicleRain.reservedDrops==state.activeDrops)
           assert(state.activeDrops<=state.maxDrops)
@@ -347,6 +352,32 @@ class RainTests(unittest.TestCase):
           assert(obj.boxWidth==48 and obj.boxHeight==26)
           extension.onExtensionUnloaded()
           assert(native.numDrops==0)
+        ''')
+
+    def test_cabin_guard_survives_positive_fade_validation_and_restores_normal_fade(self):
+        self.run_lua((ROOT / "tests/vehicle_stub.lua").read_text(encoding="utf-8"))
+        self.run_lua('''
+          extension.configure({quality="low",intensity=1,transition=0,variability=0})
+          for i=1,30 do extension.onUpdate(0.05,0.05) end
+          local fine=registry.beamngWeather_hashk014_fine
+          fine.fadeDist=-4
+          assert(fine.fadeDist==0,"Native PositiveFloat must reject the previous negative encoding")
+          for _,volume in ipairs({0.65,1,1.6}) do
+            extension.configure({volume=volume,cabinProtection=true})
+            extension.onUpdate(0.05,0.05)
+            local state=extension.getState().vehicleRain
+            for _,name in ipairs({"fine","body","distant"}) do
+              local layer=registry["beamngWeather_hashk014_"..name]
+              assert(layer.fadeDist>=0 and layer.fadeDistEnd>0)
+              assert(math.abs(layer.fadeDist-layer.fadeDistEnd-state.guardRadius)<0.00001)
+            end
+          end
+          extension.configure({cabinProtection=false})
+          extension.onUpdate(0.05,0.05)
+          assert(extension.getState().vehicleRain.guardRadius==0)
+          assert(math.abs(fine.fadeDist-4*1.6)<0.00001)
+          assert(fine.fadeDist<fine.fadeDistEnd)
+          assert(extension.getState().vehicleRain.glassDrops>0)
         ''')
 
     def test_native_cloud_modes_and_restoration(self):

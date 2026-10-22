@@ -1,14 +1,14 @@
-# BeamNg.weather 0.5.1 alpha 1
+# BeamNg.weather 0.5.2 alpha 1
 
-Fix the glass scan stopping with `Too many glass triangles`, leaving zero detected windows and zero surface droplets in 0.5.0.
+Fix missing window droplets and untextured rectangles after the 0.5.1 glass scan fix, and correct the native cabin guard encoding.
 
-- Select each triangle range using the vehicle's actual material table. Inherited JBeam deformation options no longer cause an entire mixed-material mesh to be treated as glass when material names are available.
-- Remove duplicate primitive ranges and repeated indexed triangles. Exclude window handles, switches, racing nets, lamp glass and invisible/interior glass.
-- For genuine high-detail glass above 30,000 candidate triangles, distribute a bounded sample across all detected panes instead of disabling every window effect. The GUI reports when sampling is active; sliding can be shorter across omitted triangles.
-- Write scan counts and failures to `beamng.log` under `beamngWeather_glass` to make further game reports diagnosable.
+- Give render meshes distinct names from their materials. The actual 0.5.1 game log reported a Material/ProceduralMesh namespace collision followed by repeated missing-material errors. It also confirmed successful detection of 7 glass meshes and 878 triangles.
+- Check that both surface materials exist and are Material objects before creating visual meshes or activating cabin protection. A missing material now produces a diagnostic instead of untextured fallback geometry.
+- Encode the cabin guard using positive fade values (`fadeDist > fadeDistEnd`). The previous negative value conflicts with the precipitation field's PositiveFloat validator. Update the original vertex shader to decode the guard and register a new shader version.
+- Strengthen the synthetic engine boundary: load the actual surface material definitions, enforce shared object/material names, require valid mesh materials and apply positive-float validation. The prior tests omitted these behaviors and missed both defects.
 
-**Install:** close BeamNG, remove the previous mod ZIP, including copies ending in `(1)` or `(2)`, and install this ZIP as `beamng_weather_hashk014.zip`. Keep exactly one copy in the active user folder's `mods` directory. Restart, load a closed-roof vehicle, enable rain and close Escape for a few seconds. Check **Esc > Mods > BeamNg.weather > Vehicle windows** for detected panes and surface droplets.
+**Install:** fully close BeamNG before replacing the old mod ZIP. Keep only `beamng_weather_hashk014.zip` in the active user folder's `mods` directory; remove older `(1)`/`(2)` copies. Restart the game to clear the previous material namespace conflict. Load a closed-roof car and let rain run outside the Escape menu before checking the windshield, side glass and cabin.
 
-**Validation:** 41 local Python/LuaJIT tests and both Node UI controller checks pass. Five regression tests cover material selection, duplicate ranges, duplicate triangles, a 32,002-triangle vehicle and material-name fallback. Two regressions reproduce the reported error with the old scanner and pass with the new one. CI runs 40 portable tests and skips one installed-game integration test. Archive contents and texture generation are checked. The native render and FPS still require an in-game retest; the user's screenshot confirms the old scan failure, not the corrected appearance.
+**Validation:** 44 local Python/LuaJIT tests, both Node UI checks, archive verification and SM5/SM6 vertex/pixel shader compilation pass. CI runs 43 portable tests and skips one installed-game integration. The old renderer reproduces the namespace collision with the strengthened test boundary. These checks do not confirm the corrected appearance or cabin exclusion in a running game; an in-game retest is still needed.
 
-The cabin envelope, glass damage/openings, transparency and droplet renderer remain experimental. No road wetness, puddles, friction or wiper clearing is added.
+Existing limits remain: conservative cabin envelope, experimental glass/pose rendering and damage handling, no wiper clearing, puddles or friction changes.

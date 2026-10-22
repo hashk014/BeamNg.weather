@@ -30,12 +30,19 @@ local function makeMeshes()
   if live(group) and live(glassMesh) and live(airMesh) then return end
   freeMeshes()
   loadJsonMaterialsFile("art/beamng_weather_hashk014/surfaces.materials.json")
+  for _,name in ipairs({"beamngWeather_hashk014_glassDrops","beamngWeather_hashk014_nearRain"}) do
+    local material=scenetree.findObject(name)
+    if not live(material) or material:getClassName()~="Material" then
+      error("Rain material unavailable: "..name..". Restart with the complete mod ZIP.")
+    end
+  end
   group=createObject("SimGroup");group.canSave=false;group:registerObject("beamngWeather_hashk014_surfaces")
   scenetree.MissionGroup:addObject(group)
   local function create(name)
     local mesh=createObject("ProceduralMesh")
     mesh.canSave=false;mesh:setField("collisionType",0,"None")
-    mesh:registerObject("beamngWeather_hashk014_"..name)
+    -- Materials and scene objects share one native namespace.
+    mesh:registerObject("beamngWeather_hashk014_"..name.."Mesh")
     group:addObject(mesh)
     return mesh
   end
