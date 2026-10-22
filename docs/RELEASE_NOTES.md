@@ -1,15 +1,14 @@
-# BeamNg.weather 0.6.0 alpha 1
+# BeamNg.weather 0.6.1 alpha 1
 
-Denser window droplets with experimental scene-color refraction, plus a replacement airborne renderer for cabin protection.
+Fix the Lua error that removed window droplets and disabled cabin protection in 0.6.0.
 
-- Add an original curved-bead shader that samples the native refraction back buffer. Distortion follows each bead's projected size and orientation; transparent corners are clipped. The new **Refraction strength (0 disables)** control ranges from 0 to 2. Zero selects the previous normal-mapped material.
-- Raise glass caps to 1,200 / 2,400 / 4,000 / 6,000 on Low / Balanced / High / Ultra. Increase arrival rate, lifetime and base size, add initial accumulation, and extend **Window droplet amount** to 4. Existing saved size preferences remain intact.
-- Disable all three mod-owned native emitters while cabin protection is active near the vehicle. A bounded airborne mesh excludes the glass-derived cabin, footwell and movement margin. Protection no longer relies on the native shader's fade-mask binding. Native precipitation returns when protection is disabled, unavailable or outside the supported camera range.
-- Cover approximately 18 m times Volume around the camera, focusing most airborne drops within 6 m. Map-owned rain and other mods are not modified. Increased mesh density may cost FPS; start with Balanced or Low.
-- Keep velocity-dependent window arrival/sliding, shelter checks, English UI, presets and the corrected glass coordinates from 0.5.3. No wipers, puddles, road wetness or friction changes.
+- Set the CustomMaterial blend mode through `setField("translucentBlendOp", 0, "LerpAlpha")`, matching the installed game's material setup. Direct assignment passed a string to a native enum setter expecting a number.
+- If Lua refraction-material setup fails, keep normal-mapped beads and cabin protection active. Display a specific warning, clean up failed material objects and retry when the refraction strength changes. Avoid repeated rescans and setup attempts every frame.
+- Include a traceback for other fatal vehicle-renderer errors, making further runtime failures easier to locate.
+- Preserve the denser accumulation, adjustable refraction and exclusive airborne renderer introduced in 0.6.0. No new physics changes.
 
-**Install:** fully close BeamNG, replace the previous mod ZIP, keep one installed copy, and restart. Test a closed-roof vehicle with Downpour, Window droplet amount 2, Window droplet size 1.5 and Refraction strength 1. Close Escape and allow accumulation. Compare stationary, forward and reverse driving, then check the footwell and seats. If refraction renders incorrectly, set its strength to 0 and report the renderer and any orange diagnostic.
+**Install:** fully close BeamNG, replace the previous ZIP, keep one installed copy, and restart. Use a closed-roof vehicle. In Vehicle windows, check that detected meshes and surface droplets stay above zero. Close Escape and check the windshield, seats and footwell. If the new refraction shader renders incorrectly, set Refraction strength to 0; this keeps the normal-mapped beads and cabin protection.
 
-**Validation:** 49 local Python/LuaJIT tests and both Node UI checks pass. The original lens shader compiles offline against the installed 0.40.1.0 headers with FXC SM5 and DXC SM6, including SM6.6 bindless permutations. Texture regeneration and deterministic ZIP/source checks pass. CI runs 48 portable tests and skips the installed-game integration.
+**Validation:** 51 local Python/LuaJIT tests and both Node UI checks pass. A stricter native-enum boundary reproduces the old assignment failure. New tests inject refraction setup errors and verify that beads and cabin protection survive, native emitters remain at zero, and changing strength can recover. The ZIP is reproducible and matches the source. CI runs 50 portable tests, skipping the installed-game integration.
 
-**Still experimental:** these checks do not prove native back-buffer binding, visual quality, cabin exclusion or FPS in the game. The user reports that 0.5.3 glass placement generally works, but this new renderer still needs their gameplay test. Refraction is a screen-space approximation and cannot reconstruct hidden scene surfaces. Damaged/open windows, unusual vehicle meshes and moving glass remain limited.
+**Runtime limit:** the user's log confirms successful glass detection followed by the native binding error in 0.6.0. This patch fixes that incompatible call, but the new in-game appearance and cabin exclusion still need a retest. GPU failures that do not raise a Lua error are not automatically detected.

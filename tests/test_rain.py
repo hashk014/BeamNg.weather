@@ -333,6 +333,26 @@ class RainTests(unittest.TestCase):
           assert(not registry.beamngWeather_hashk014_surfaces)
         ''')
 
+    def test_refraction_setup_failure_does_not_restore_native_cabin_rain(self):
+        self.run_lua((ROOT / "tests/vehicle_stub.lua").read_text(encoding="utf-8"))
+        self.run_lua('''
+          local create=createObject
+          createObject=function(class)
+            if class=="CustomMaterial" then error("injected unsupported material") end
+            return create(class)
+          end
+          extension.configure({quality="low",intensity=1,transition=0,variability=0})
+          for i=1,30 do extension.onUpdate(0.05,0.05) end
+          local state=extension.getState().vehicleRain
+          assert(state.available and state.glassDrops>0 and state.airBackend=="mesh")
+          assert(state.warning:find("Refraction unavailable"))
+          for _,name in ipairs({"fine","body","distant"}) do
+            assert(registry["beamngWeather_hashk014_"..name].numDrops==0)
+          end
+          extension.onClientEndMission()
+          assert(not registry.beamngWeather_hashk014_surfaces)
+        ''')
+
     def test_native_f11_coverage_profile_is_used_without_mutating_map_object(self):
         self.run_lua('''
           local native={registered=true,class="Precipitation",boxWidth=16,boxHeight=10,fadeDist=5,fadeDistEnd=10,numDrops=0,dataBlock="rain_medium"}

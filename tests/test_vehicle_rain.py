@@ -74,6 +74,32 @@ class VehicleRainTests(unittest.TestCase):
           assert(effects.getState().glassDrops<=1200)
         ''')
 
+    def test_material_setup_failure_keeps_beads_and_cabin_and_can_retry(self):
+        self.run_lua('''
+          local create=createObject
+          local attempts,broken=0,nil
+          createObject=function(class)
+            local obj=create(class)
+            if class=="CustomMaterial" then
+              attempts=attempts+1;broken=obj
+              obj.setField=function() error("injected material setup failure") end
+            end
+            return obj
+          end
+          advance(30)
+          local state=effects.getState()
+          assert(state.available and state.panels==5 and state.glassDrops>0)
+          assert(state.airBackend=="mesh" and state.guardRadius>0 and state.nearDrops>0)
+          assert(state.warning:find("Refraction unavailable") and not state.refraction)
+          assert(attempts==1 and broken.deleted and scans==1)
+          assert(registry.beamngWeather_hashk014_glassDropsMesh.mesh.material=="beamngWeather_hashk014_glassDrops")
+          createObject=create
+          config.glassDistortion=1.1;advance(2)
+          state=effects.getState()
+          assert(state.refraction and not state.warning and state.airBackend=="mesh")
+          assert(state.glassDrops>0 and scans==1)
+        ''')
+
     def test_fast_vehicle_excludes_whole_air_quads_from_seats_and_footwell(self):
         self.run_lua('''
           for _,speed in ipairs({-60,0,60}) do

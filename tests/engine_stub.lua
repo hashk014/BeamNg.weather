@@ -55,6 +55,15 @@ core_environment = {
 function createObject(class)
   nextID = nextID + 1
   local obj = {class = class, children = {}, id = nextID}
+  if class == "CustomMaterial" then
+    -- Native direct enum assignment expects a number; setField parses names.
+    setmetatable(obj,{__newindex=function(t,key,value)
+      if key=="translucentBlendOp" and type(value)~="number" then
+        error("bad argument #6 (number expected, got "..type(value)..")")
+      end
+      rawset(t,key,value)
+    end})
+  end
   if class == "Precipitation" then
     local fadeFields={}
     setmetatable(obj,{
@@ -69,7 +78,7 @@ function createObject(class)
   function obj:getClassName() return self.class end
   function obj:setHidden(value) self.hidden = value end
   function obj:postApply() self.applies = (self.applies or 0) + 1 end
-  function obj:setField(key, index, value) self[key] = value end
+  function obj:setField(key, index, value) rawset(self,key,value) end
   function obj:registerObject(name)
     if self.class == "Precipitation" then
       assert(registry[self.dataBlock], "Datablock required before registration")

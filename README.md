@@ -4,8 +4,10 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.6.0** adds experimental scene-color refraction on window beads,
-much denser accumulation and adjustable distortion. Near a protected vehicle,
+Version **0.6.1** fixes a material enum assignment that aborted vehicle rain in
+0.6.0 with `number expected, got string`. A refraction setup failure now falls
+back to normal-mapped beads while keeping cabin protection active.
+It retains experimental scene-color refraction, denser accumulation and adjustable distortion. Near a protected vehicle,
 the mod disables its native precipitation emitters and uses a bounded airborne
 mesh that excludes the cabin, including the footwell and a margin for motion.
 The classic gray/orange interface stays in English. Open the settings at:
@@ -18,7 +20,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.6.0-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.6.1-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -121,6 +123,9 @@ Start with a closed-roof car and allow a few seconds for scanning and accumulati
   each bead, with a curved lens profile and a subtle rim/highlight. Range 0 to 2;
   default 1. Set it to 0 to use the previous normal-mapped material if the new
   shader is incompatible with your renderer. Existing saved sizes are preserved.
+  Lua errors while setting up refraction automatically select the normal-mapped
+  fallback and show a diagnostic. Changing strength retries setup; this does not
+  detect every GPU shader/rendering failure.
 - Vehicle velocity changes arrival rates and sliding direction, so reversing
   favors a different side than driving forward. Gravity also acts along panes.
 - Static roof tests stop new glass droplets under shelter. Existing beads run

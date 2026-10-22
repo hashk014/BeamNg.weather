@@ -114,7 +114,10 @@ local function glass(config,dt,pos,frame,incoming,intensity)
     droplets[#droplets+1]={tri=lo,bary={1-u,u*(1-v),u*v},age=0,life=10+math.random()*12,size=0.002+math.random()^2*0.005}
     credit=credit-1
   end
-  local part=g.part(glassMaterial.get(config))
+  local material,materialWarning=glassMaterial.get(config)
+  state.refraction=material=="beamngWeather_hashk014_glassLens"
+  if materialWarning then state.warning=materialWarning end
+  local part=g.part(material)
   local remaining,wetPanels={},{}
   for _,drop in ipairs(droplets) do
     drop.age=drop.age+dt
@@ -211,11 +214,11 @@ local function update(config,dt,intensity)
   else airMesh:setHidden(true);near.clear();state.nearDrops,state.reservedDrops=0,0 end
   state.guardRadius=radius
   state.airBackend=radius>0 and "mesh" or "native"
-  state.refraction=config.glassDistortion>0
+  if not config.glassDrops then state.refraction=false end
 end
 function M.update(config,dt,intensity)
   if failureTimer>0 then failureTimer=math.max(0,failureTimer-dt);return end
-  local ok,err=pcall(update,config,dt,intensity)
+  local ok,err=xpcall(function() update(config,dt,intensity) end,debug.traceback)
   if not ok then
     M.clear()
     state.warning="Vehicle rain unavailable: "..tostring(err)

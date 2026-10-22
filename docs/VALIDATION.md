@@ -1,6 +1,14 @@
-# Validation: 0.6.0 experimental release
+# Validation: 0.6.1 experimental release
 
 Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+
+## 0.6.1 native enum assignment and failure isolation
+
+The user's screenshot and 0.6.0 log report `luaBinding.lua:165: bad argument #6 (number expected, got string)`. The log shows successful detection of 8 glass meshes and 314 triangles, followed by repeated renderer failure and rescans. Line 165 is the installed native static-field setter. The new CustomMaterial directly assigned the enum `translucentBlendOp="LerpAlpha"`; the installed core materials use `setField("translucentBlendOp", 0, "LerpAlpha")` to parse that symbolic value instead. 0.6.1 follows that native pattern. The earlier mock accepted any type and missed this boundary.
+
+The boundary now rejects direct symbolic enum writes but allows setField parsing. Before the fix, 16 of the 21 vehicle tests fail under this stricter boundary. They pass after correction. Two new failure-injection tests verify that refraction setup failures keep detected panes, visible bead geometry and the protected airborne backend, without repeated rescans or material-creation attempts. They also verify cleanup of failed material objects, recovery after changing strength, and zero native emitters during fallback. Fatal renderer errors now include a traceback in the diagnostic/log.
+
+These checks reproduce the incompatible assignment and failure path synthetically. The new release has not been run in-game; visual refraction and cabin exclusion still require the user's retest. GPU failures which do not raise Lua errors cannot be detected by this fallback.
 
 ## 0.6.0 refraction, density and airborne renderer
 
@@ -36,11 +44,11 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 
 ## Evidence and completed checks
 
-- **49 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 48 portable tests and
+- **51 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 50 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Twenty-one synthetic tests exercise the actual vehicle-effect modules using the
+- Twenty-two synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;
