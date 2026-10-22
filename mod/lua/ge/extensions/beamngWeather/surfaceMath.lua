@@ -68,11 +68,21 @@ function M.barycentric(p,t)
 end
 function M.point(t,b) return M.add(M.add(M.mul(t.a,b[1]),M.mul(t.b,b[2])),M.mul(t.c,b[3])) end
 function M.flow(normal,gravity,air,size)
-  -- A pinning threshold keeps small beads still; larger ones run down the pane.
-  local g=M.mul(M.project(gravity,normal),size>0.0022 and 0.009 or 0.001)
+  -- Small beads cling to glass. Larger beads creep under gravity and air shear;
+  -- terminal speed prevents motorway airflow from moving them centimetres per tick.
+  local mobility=math.max(0,math.min(1,(size-0.0024)/0.0046))
+  local gravityFlow=M.mul(M.project(gravity,normal),0.00015+0.0025*mobility)
   local tangent=M.project(air,normal)
   local speed=M.length(tangent)
-  return M.add(g,M.mul(tangent,math.min(0.014,speed*0.00022)))
+  local shear=math.max(0,speed-6)*(0.0002+0.0014*mobility)
+  local flow=M.add(gravityFlow,M.mul(M.unit(tangent),shear))
+  local length=M.length(flow)
+  local terminal=0.018+0.062*mobility
+  return length>terminal and M.mul(flow,terminal/length) or flow
+end
+function M.smoothFlow(previous,target,normal,dt)
+  local blend=1-math.exp(-math.max(0,dt)/0.18)
+  return M.project(M.add(previous,M.mul(M.sub(target,previous),blend)),normal)
 end
 function M.flux(normal,incoming) return math.max(0,-M.dot(normal,incoming)) end
 function M.part(material) return {verts={},normals={},uvs={},faces={},material=material} end

@@ -53,27 +53,29 @@ def dds(width, height, pixels):
     return b"DDS " + struct.pack("<31I", *header) + b"".join(compressed)
 
 
-def atlas(seed, opacity, width_scale, length_scale):
+def atlas(seed, opacity, width_scale, length_scale, lanes=1):
     size, cell = 512, 128
     rng = random.Random(seed)
     pixels = bytearray(bytes((220, 231, 238, 0)) * (size*size))
     for cy in range(4):
         for cx in range(4):
-            center = cell/2 + rng.uniform(-9, 9)
-            length = rng.uniform(35, 86) * length_scale
-            sigma = rng.uniform(0.85, 1.9) * width_scale
-            strength = rng.uniform(0.55, 1) * opacity
-            for y in range(cell):
-                t = (y-cell/2) / (length/2)
-                if abs(t) >= 1:
-                    continue
-                taper = (1-t*t) ** 1.8
-                local_sigma = sigma * (0.6 + 0.4 * taper)
-                for x in range(max(0, int(center-10)), min(cell, int(center+11))):
-                    across = math.exp(-0.5*((x-center)/local_sigma)**2)
-                    alpha = round(strength * taper * across)
-                    index = (((cy*cell+y)*size)+(cx*cell+x))*4
-                    pixels[index+3] = min(255, max(0, alpha))
+            for lane in range(lanes):
+                center = cell/2 + (lane-(lanes-1)/2)*30 + rng.uniform(-9, 9)
+                length = rng.uniform(35, 86) * length_scale
+                sigma = rng.uniform(0.85, 1.9) * width_scale
+                strength = rng.uniform(0.55, 1) * opacity
+                center_y = cell/2 + (rng.uniform(-8,8) if lanes>1 else 0)
+                for y in range(cell):
+                    t = (y-center_y) / (length/2)
+                    if abs(t) >= 1:
+                        continue
+                    taper = (1-t*t) ** 1.8
+                    local_sigma = sigma * (0.6 + 0.4 * taper)
+                    for x in range(max(0, int(center-10)), min(cell, int(center+11))):
+                        across = math.exp(-0.5*((x-center)/local_sigma)**2)
+                        alpha = round(strength * taper * across)
+                        index = (((cy*cell+y)*size)+(cx*cell+x))*4
+                        pixels[index+3] = max(pixels[index+3], min(255, max(0, alpha)))
     return dds(size, size, pixels)
 
 
@@ -98,7 +100,7 @@ def glass_texture(normal=False):
                     highlight = math.exp(-((dx+0.35)**2+(dy+0.42)**2)/0.025)
                     rim = math.exp(-((math.sqrt(r2)-0.87)/0.09)**2)
                     value = round(110+100*highlight+40*rim)
-                    rgba = (value, min(255,value+10), min(255,value+18), round((18+100*rim+120*highlight)*edge*fade))
+                    rgba = (value, min(255,value+10), min(255,value+18), min(255,round((42+125*rim+145*highlight)*edge*fade)))
                 pixels[(frame%4)*cell+x, (frame//4)*cell+y] = rgba
     return encode_png(image)
 
@@ -132,12 +134,14 @@ def outputs():
         "rain_fine.color.dds": atlas(1401, 102, 0.8, 0.7),
         "rain_body.color.dds": atlas(1402, 142, 1, 1.1),
         "rain_distant.color.dds": atlas(1403, 83, 0.9, 0.95),
+        "rain_near.color.dds": atlas(1404, 210, 1.6, 1, lanes=3),
         "rain_empty.color.dds": dds(4, 4, bytes(4*4*4)),
         "glass_drop.color.png": glass_texture(),
         "glass_drop.normal.png": glass_texture(normal=True),
     }
     result["glass_drop.opacity.data.png"] = opacity_texture(result["glass_drop.color.png"])
     result["rain_body.opacity.data.png"] = opacity_texture(result["rain_body.color.dds"])
+    result["rain_near.opacity.data.png"] = opacity_texture(result["rain_near.color.dds"])
     return result
 
 

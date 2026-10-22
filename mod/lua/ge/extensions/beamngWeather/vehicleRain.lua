@@ -118,7 +118,7 @@ local function glass(config,dt,pos,frame,incoming,intensity)
     while lo<hi do local mid=math.floor((lo+hi)/2);if weighted[mid]<wanted then lo=mid+1 else hi=mid end end
     if total<=0 then break end
     local u=math.sqrt(math.random());local v=math.random()
-    droplets[#droplets+1]={tri=lo,bary={1-u,u*(1-v),u*v},age=0,life=10+math.random()*12,size=0.002+math.random()^2*0.005}
+    droplets[#droplets+1]={tri=lo,bary={1-u,u*(1-v),u*v},age=0,life=10+math.random()*12,size=0.002+math.random()^2*0.005,flow=g.v()}
     credit=credit-1
   end
   local material
@@ -130,7 +130,8 @@ local function glass(config,dt,pos,frame,incoming,intensity)
   for _,drop in ipairs(droplets) do
     drop.age=drop.age+dt
     local t=geometry.triangles[drop.tri]
-    local flow=g.flow(t.n,gravity,relative,drop.size)
+    local flow=g.smoothFlow(drop.flow,g.flow(t.n,gravity,relative,drop.size),t.n,dt)
+    drop.flow=flow
     if drop.age<drop.life and walk(drop,g.mul(flow,dt)) and #remaining<cap then
       remaining[#remaining+1]=drop
       t=geometry.triangles[drop.tri]
@@ -139,10 +140,12 @@ local function glass(config,dt,pos,frame,incoming,intensity)
       local point=g.add(g.point(t,drop.bary),g.mul(t.n,0.0018))
       local tangent=g.project(gravity,t.n)
       if g.length(tangent)<0.001 then tangent=g.cross(t.n,g.v(1,0,0)) end
-      local along=g.length(flow)>0.001 and g.unit(flow) or g.unit(tangent)
+      -- Anchor the bead's texture to gravity; reversing the car must not flip
+      -- the highlight/normal map or turn a nearly stationary bead sideways.
+      local along=g.unit(tangent)
       local across=g.unit(g.cross(along,t.n))
       local size=drop.size*config.glassScale
-      local up=g.mul(along,size*(1+math.min(3,g.length(flow)*10)))
+      local up=g.mul(along,size*(1+math.min(1.4,g.length(flow)*14)))
       local age=math.min(15,math.floor(drop.age/drop.life*16))
       g.quad(part,g.worldVector(point,frame),g.worldVector(g.mul(across,size),frame),g.worldVector(up,frame),g.worldVector(t.n,frame),age)
     end
@@ -205,9 +208,9 @@ local function update(config,dt,intensity)
   glassTick,airTick=glassTick+dt,airTick+dt
   local glassConfig=table.concat({tostring(config.glassDrops),config.quality,config.glassAmount,config.glassScale,
     config.glassDistortion,tostring(config.experimentalRefraction)},":")
-  -- Glass moves with the vehicle every frame; only its changing shape is uploaded at 10 Hz.
-  if glassTick>=0.1-1e-8 or lastGlassConfig~=glassConfig then
-    local step=math.min(0.2,glassTick);glassTick=0;lastGlassConfig=glassConfig
+  -- Bounded 20 Hz uploads plus slow, damped bead flow; pose follows every frame.
+  if glassTick>=0.05-1e-8 or lastGlassConfig~=glassConfig then
+    local step=math.min(0.1,glassTick);glassTick=0;lastGlassConfig=glassConfig
     local part,count,wetPanels
     if config.glassDrops then part,count,wetPanels=glass(config,step,pos,frame,incoming,intensity)
     else droplets={};part,count=g.part("beamngWeather_hashk014_glassDrops"),0;materialWarning=nil;state.refraction=false end

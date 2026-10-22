@@ -95,8 +95,8 @@ class VehicleRainTests(unittest.TestCase):
           local air=registry.beamngWeather_hashk014_nearDropsMesh
           local gb,ab=glass.builds,air.builds
           for i=1,1200 do effects.update(config,1/120,1) end
-          assert(glass.builds-gb<=101 and air.builds-ab<=201)
-          assert(glass.builds-gb>=99 and air.builds-ab>=199)
+          assert(glass.builds-gb<=201 and air.builds-ab<=201)
+          assert(glass.builds-gb>=199 and air.builds-ab>=199)
           gb,ab=glass.builds,air.builds
           for i=1,120 do effects.update(config,0,1) end
           assert(glass.builds==gb and air.builds==ab)
@@ -331,6 +331,45 @@ class VehicleRainTests(unittest.TestCase):
           local stationary=g.flow(side,g.v(0,0,-9.81),g.v(),0.003)
           assert(g.length(a)>g.length(stationary))
         ''')
+
+    def test_bead_adhesion_terminal_speed_and_damped_reversal(self):
+        self.run_lua('''
+          local normal,gravity=g.v(1,0,0),g.v(0,0,-9.81)
+          local small=g.flow(normal,gravity,g.v(0,-25,-9),0.002)
+          local large=g.flow(normal,gravity,g.v(0,-25,-9),0.007)
+          assert(g.length(small)<g.length(large)/3)
+          for _,speed in ipairs({-150,-60,0,60,150}) do
+            local flow=g.flow(normal,gravity,g.v(0,speed,-9),0.007)
+            assert(g.length(flow)<=0.080001 and math.abs(g.dot(flow,normal))<1e-8)
+            assert(g.length(g.mul(flow,0.05))<=0.004001)
+          end
+          local forward=g.flow(normal,gravity,g.v(0,-40,-9),0.007)
+          local reverse=g.flow(normal,gravity,g.v(0,40,-9),0.007)
+          local first=g.smoothFlow(forward,reverse,normal,0.05)
+          assert(first.y<0 and first.y>forward.y,"No instantaneous direction flip")
+          local a,b=forward,forward
+          for i=1,20 do a=g.smoothFlow(a,reverse,normal,0.05) end
+          for i=1,60 do b=g.smoothFlow(b,reverse,normal,1/60) end
+          assert(a.y>0 and g.length(g.sub(a,b))<1e-8)
+          assert(g.length(g.sub(g.smoothFlow(a,reverse,normal,0),a))<1e-8)
+        ''')
+
+    def test_near_rain_atlas_has_more_visible_water_without_filled_rectangles(self):
+        folder=ROOT/'mod/art/beamng_weather_hashk014'
+        with Image.open(folder/'rain_body.color.dds') as old, Image.open(folder/'rain_near.color.dds') as new:
+            before=old.convert('RGBA').getchannel('A')
+            after=new.convert('RGBA').getchannel('A')
+            self.assertGreater(sum(after.tobytes()),4*sum(before.tobytes()))
+            for y in range(4):
+                for x in range(4):
+                    tile=after.crop((x*128,y*128,(x+1)*128,(y+1)*128))
+                    self.assertEqual(tile.crop((0,0,128,1)).getextrema(),(0,0))
+                    self.assertEqual(tile.crop((0,127,128,128)).getextrema(),(0,0))
+                    self.assertEqual(tile.crop((0,0,1,128)).getextrema(),(0,0))
+                    self.assertEqual(tile.crop((127,0,128,128)).getextrema(),(0,0))
+                    columns=[sum(tile.getpixel((cx,cy)) for cy in range(128)) for cx in range(128)]
+                    runs=sum(v>0 and (i==0 or columns[i-1]==0) for i,v in enumerate(columns))
+                    self.assertEqual(runs,3)
 
     def test_pause_switches_and_cleanup(self):
         self.run_lua('''

@@ -1,6 +1,16 @@
-# Validation: 0.6.2 experimental release
+# Validation: 0.6.3 experimental release
 
 Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+
+## 0.6.3 smoother motion and more visible water
+
+The user confirms that 0.6.2 renders window droplets and airborne rain successfully. Their remaining report is visibly stepped window movement and insufficient rain visibility. This is positive user gameplay evidence for the previous version, not native visual validation of the new changes.
+
+Previously, a bead exposed to 60 m/s tangential airflow could approach 0.84 m/s sliding speed at 10 mesh uploads per second. The new model has size-dependent adhesion, a 0.18 s exponential response to changing flow, and a maximum sliding speed of 0.08 m/s. At a 50 ms upload interval the maximum nominal step is 4 mm. Glass uploads now run at up to 20 Hz; caps stay unchanged. Texture orientation remains anchored to pane gravity so reversing flow does not flip the bead highlight. Long frame stalls cap the integrated motion interval at 0.1 s to limit catch-up jumps.
+
+New tests cover small/large bead mobility, bounded tangent motion at +/-150 m/s airflow, gradual reversal, equivalent velocity smoothing at 20/60 Hz and pause. The upload-rate test now requires at most 201 glass and air uploads during 10 simulated seconds at 120 graphics updates per second. Nearby rain uses a new three-streak atlas without adding geometry. Pixel tests verify three separate silhouettes per tile, transparent borders, higher integrated alpha and exact PBR opacity masks. Classic bead rim/body opacity is increased; native precipitation atlases remain byte-identical.
+
+The same synthetic timing procedure used below measures 0.536 s on Low and 1.108 s on Balanced for 10 simulated seconds, with 200 glass and 200 air uploads. This costs more than 0.6.2 (0.313 / 0.855 s) but less than 0.6.1 (2.642 / 8.177 s) in this harness. No native GPU/FPS result is inferred. The new visual density, smoothness and rendering cost still need the user's gameplay test.
 
 ## 0.6.2 runtime sampler failure and lower upload cost
 
@@ -61,11 +71,11 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 
 ## Evidence and completed checks
 
-- **54 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 53 portable tests and
+- **56 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 55 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Twenty-five synthetic tests exercise the actual vehicle-effect modules using the
+- Twenty-seven synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;
@@ -83,7 +93,7 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 - Native guard constants reuse the renderer's fade fields. Both revised HLSL
   stages compile with Windows SDK FXC (SM5) and DXC (SM6). This is offline
   compilation, not proof of runtime shader bindings or rendering.
-- Original four BC3 DDS, two glass PNG and two opacity PNG textures regenerate identically.
+- Original five BC3 DDS, two glass PNG and three opacity PNG textures regenerate identically.
   Independent image decoding checks alpha, atlas variants, mipmaps and normals.
 - Vue settings page rendered in a browser using the installed game's Vue build,
   with simulated state. New glass/cabin controls checked through the visible UI.

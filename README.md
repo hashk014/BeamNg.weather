@@ -4,10 +4,11 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.6.2** restores classic window beads by default after a DirectX 12
-sampler-binding failure in the experimental refraction renderer. It reduces
-particle caps and mesh upload rates, and uses a wider cabin exclusion that
-remains conservative through turns. Refraction is now an explicit experiment.
+Version **0.6.3** smooths window-bead movement with size-dependent adhesion,
+damped airflow response and bounded sliding speed. Glass uploads run at up to
+20 Hz with the same particle caps. Stronger bead opacity and a new three-streak
+near-rain atlas make rain more conspicuous without adding airborne geometry.
+Classic beads remain the default; refraction remains an explicit experiment.
 Near a protected vehicle,
 the mod disables its native precipitation emitters and uses a bounded airborne
 mesh that excludes the cabin, including the footwell and a margin for motion.
@@ -21,7 +22,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.6.2-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.6.3-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -136,7 +137,11 @@ Start with a closed-roof car and allow a few seconds for scanning and accumulati
   fallback and show a diagnostic. Changing strength retries setup; this does not
   detect every GPU shader/rendering failure.
 - Vehicle velocity changes arrival rates and sliding direction, so reversing
-  favors a different side than driving forward. Gravity also acts along panes.
+  favors a different side than driving forward. Small beads cling more strongly;
+  larger beads respond more to gravity and airflow. A 0.18-second response time
+  smooths direction changes, with sliding capped at 0.08 m/s for the largest beads.
+  The highlight stays oriented on the glass rather than flipping when flow reverses.
+  This is an artistic water-motion model, not a fluid solver.
 - Static roof tests stop new glass droplets under shelter. Existing beads run
   off and fade. A cached height grid clips nearby airborne rain below roofs.
 
@@ -155,10 +160,17 @@ It covers a radius of approximately 18 m times Volume around the camera, with
 most drops concentrated within 6 m. Distant native rain returns when protection
 is disabled or the camera leaves its supported range. Map-owned precipitation
 and other mods remain untouched and may still enter the cabin.
-Glass geometry refreshes at up to 10 Hz and airborne geometry at 20 Hz;
+Glass and airborne geometry refresh at up to 20 Hz;
 the glass transform follows the vehicle every graphics frame. The wider exclusion
 can remove some rain outside the car. FPS and native
 mesh bindings still need in-game validation. See [validation](docs/VALIDATION.md).
+
+Nearby air particles now display three varied rain streaks per quad, with a wider
+silhouette and stronger opacity. The counters/budgets count particle quads, not
+each painted streak. Classic window beads also have stronger rims and opacity.
+Start with **Downpour**, **Window droplet amount 2**, and **Window droplet size 1.5**
+for deliberately obstructive wet glass, then adjust to taste. In-game exposure,
+lighting and graphics settings still affect visibility from inside the vehicle.
 
 ### Available settings
 

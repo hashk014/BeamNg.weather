@@ -14,10 +14,10 @@
           1,
           1
         ],
-        "roughnessFactor": 0.06,
+        "roughnessFactor": 0.035,
         "metallicFactor": 0,
         "opacityMap": "art/beamng_weather_hashk014/glass_drop.opacity.data.png",
-        "opacityFactor": 0.7
+        "opacityFactor": 0.9
       }
     ],
     "translucent": true,
@@ -33,7 +33,7 @@
     "version": 1.5,
     "Stages": [
       {
-        "baseColorMap": "art/beamng_weather_hashk014/rain_body.color.dds",
+        "baseColorMap": "art/beamng_weather_hashk014/rain_near.color.dds",
         "baseColorFactor": [
           0.9,
           0.94,
@@ -41,12 +41,12 @@
           1
         ],
         "emissiveFactor": [
-          0.12,
-          0.14,
-          0.16
+          0.2,
+          0.22,
+          0.24
         ],
-        "opacityMap": "art/beamng_weather_hashk014/rain_body.opacity.data.png",
-        "opacityFactor": 0.7
+        "opacityMap": "art/beamng_weather_hashk014/rain_near.opacity.data.png",
+        "opacityFactor": 0.9
       }
     ],
     "translucent": true,
