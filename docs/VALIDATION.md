@@ -1,6 +1,16 @@
-# Validation: 0.5.3 experimental release
+# Validation: 0.6.0 experimental release
 
 Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+
+## 0.6.0 refraction, density and airborne renderer
+
+The user reports that 0.5.3 window droplets generally work, but are too sparse and lack visible distortion; airborne rain still enters the cabin. Its log records 11 glass meshes and 1,008 triangles with converted Z-up cabin bounds. This supports successful scanning and the user's placement report, not proof that cabin masking worked.
+
+The new original shader uses the installed custom-material draw interface, as demonstrated by native vehicle highlight/ghost shaders, and the `$backbuff` binding used by native water. It implements a projected curved-bead displacement with transparent corners and a small rim/highlight. FXC SM5 and DXC SM6 compile both stages using the installed headers; SM6.6 bindless permutations also compile. For FXC, DXC first resolves the game's virtual-root include paths without altering the installed files. Engine sources and compiled outputs are not distributed.
+
+Synthetic tests verify CustomMaterial/back-buffer/state registration, changing the strength constant, the explicit zero-strength PBR fallback and material identity through resets. New population checks exercise zero amount, accumulation above the previous cap, and quality reduction. Full airborne quad vertices remain outside the synthetic cabin/footwell for stationary and +/-60 m/s velocity cases. Main-controller checks require all three native emitters to contain zero drops during mesh protection and restore counts on disable or camera departure. This removes dependence on the native precipitation fade-mask binding for this mod's cabin protection.
+
+The higher density and back-buffer lookup are unprofiled in-game. Native shader compilation/binding, actual refraction appearance, conservative exclusion on real cars and performance still need gameplay validation. Protection uses a finite airborne volume, so distant rain can be reduced while active. Map-owned rain is unchanged. These are deliberate limitations of this experimental release, not validated parity with the previous native renderer.
 
 ## 0.5.3 coordinate and transparency correction
 
@@ -26,18 +36,18 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 
 ## Evidence and completed checks
 
-- **46 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 45 portable tests and
+- **49 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 48 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Eighteen synthetic tests exercise the actual vehicle-effect modules using the
+- Twenty-one synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;
   asynchronous mesh timeout; corrupt-data fallback; camera distance; pose tracking;
   world-space near particles; PNG alpha fading and normal variation.
 - Native F11 `rain_coverage` objects were inspected read-only in the installed Jungle Rock Island, Small Island and East Coast level archives; West Coast has `WCA_rain`. They are `Precipitation` volumes, not a separate vehicle-occlusion API. The mod inherits volume dimensions/fade for its owned ambient layer and falls back elsewhere. A regression test checks profile use, fallback and preservation of the source object.
-- Main-controller integration verifies native shader guarding, the shared airborne
+- Main-controller integration verifies exclusive airborne backends, the airborne
   budget, and cleanup through mission end and serialization with vehicle effects.
 - GPU mesh calls were checked against the installed game's `util/export.lua`:
   `GPUMesh.bng_getGPUMesh`, `dataIsReady`, `verticesGet`, `indicesGet`,
@@ -57,19 +67,19 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 ## Native behavior still awaiting gameplay validation
 
 The game has not been controlled for this update. Tests do **not** establish
-that the native GPU snapshot coordinates, PBR transparency/normal maps, quaternion
-pose attachment, camera guard and dynamic mesh uploads render correctly in the
-actual game. Confirm all of them on real stock cars before treating this as a
-verified cabin/window feature. Actual FPS, DirectX/Vulkan differences and damage
-behavior are unmeasured.
+that the new refraction material and replacement airborne renderer work correctly
+in the actual game. The user confirms that 0.5.3 bead placement generally works.
+Confirm the new effects on stock cars before treating cabin exclusion/refraction
+as verified. Actual FPS, DirectX/Vulkan differences and damage are unmeasured.
 
 Cabin protection is a conservative glass-derived envelope, active near the player
 vehicle with a 12 m camera guard. It can remove some air outside the actual cabin.
 Turn it off for open-top vehicles. The implementation does not model each opening
 or update flexbody deformation continuously. Damage/opening windows may require
 reset, and unconventional mesh names or combined body meshes may not be supported.
-Window water is normal-mapped bead geometry, not full optical refraction; wipers
-are not implemented. New arrivals stop under static shelter, while existing beads
+Window water uses screen-space refraction, with a normal-mapped fallback at zero
+strength. It is not an optical ray tracer. Wipers are not implemented.
+New arrivals stop under static shelter, while existing beads
 run off. Collision sampling and exposure are approximate and map-dependent.
 
 If scanning/render-mesh creation fails, the effect reports a diagnostic and leaves

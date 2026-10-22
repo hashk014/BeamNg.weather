@@ -121,6 +121,13 @@ end
 local function updateCounts()
   local counts, total = model.counts(config, currentIntensity, clock)
   local reserve = math.min(total, vehicleRain.getState().reservedDrops)
+  if vehicleRain.getState().airBackend == "mesh" then
+    -- Do not rely on a renderer-specific shader mask for cabin exclusion.
+    -- Only the CPU-clipped mesh emits air rain near a protected vehicle.
+    for _,obj in ipairs(layers) do if obj.numDrops~=0 then obj.numDrops=0 end end
+    activeDrops=vehicleRain.getState().reservedDrops
+    return
+  end
   if reserve > 0 then
     local rest = total - reserve
     counts = {math.floor(rest * 0.3), math.floor(rest * 0.5), rest - math.floor(rest * 0.3) - math.floor(rest * 0.5)}
@@ -197,6 +204,7 @@ local function onUpdate(dtReal, dtSim)
   local dt = math.max(0, dtSim == nil and real or dtSim)
   if inMission() then vehicleRain.update(config, dt, currentIntensity) else vehicleRain.clear() end
   if layers then
+    updateCounts()
     local guard = vehicleRain.getState().guardRadius
     for i, obj in ipairs(layers) do
       local fade = definitions[i].fade

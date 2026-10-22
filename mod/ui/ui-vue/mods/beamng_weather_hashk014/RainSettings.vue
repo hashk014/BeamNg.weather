@@ -90,8 +90,9 @@ export default {
     const error = ref("")
     const editingKey = ref(null)
     const glassControls = [
-      { key: "glassAmount", label: "Window droplet amount", min: 0, max: 2, step: 0.05, unit: "factor" },
-      { key: "glassScale", label: "Window droplet size", min: 0.5, max: 2, step: 0.05, unit: "factor" }
+      { key: "glassAmount", label: "Window droplet amount", min: 0, max: 4, step: 0.05, unit: "factor" },
+      { key: "glassScale", label: "Window droplet size", min: 0.5, max: 2, step: 0.05, unit: "factor" },
+      { key: "glassDistortion", label: "Refraction strength (0 disables)", min: 0, max: 2, step: 0.05, unit: "factor" }
     ]
     const openChoice = ref(null)
     const choices = {

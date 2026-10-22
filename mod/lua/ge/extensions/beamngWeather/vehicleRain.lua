@@ -2,6 +2,7 @@
 local M={}
 local g=require("ge/extensions/beamngWeather/surfaceMath")
 local near=require("ge/extensions/beamngWeather/nearRain")
+local glassMaterial=require("ge/extensions/beamngWeather/glassMaterial")
 local geometry,vehicleID,vehicleData,adapter
 local glassMesh,airMesh,group
 local glassOrientation
@@ -99,18 +100,21 @@ local function glass(config,dt,pos,frame,incoming,intensity)
     local weight=geometry.panels[t.panel].exposed and t.area*(0.12+g.flux(t.n,relative)/9) or 0
     total=total+weight;weighted[i]=total
   end
-  credit=math.min(12,credit+total*70*intensity*config.glassAmount*dt)
-  local cap=({low=350,medium=650,high=1000,ultra=1400})[config.quality]
+  local cap=({low=1200,medium=2400,high=4000,ultra=6000})[config.quality]
+  credit=math.min(180,credit+total*450*intensity*config.glassAmount*dt)
+  if #droplets==0 and total>0 and config.glassAmount>0 then
+    credit=credit+math.min(300,cap*0.2)*math.min(1,intensity*config.glassAmount)
+  end
   while credit>=1 and #droplets<cap do
     local wanted=math.random()*total
     local lo,hi=1,#weighted
     while lo<hi do local mid=math.floor((lo+hi)/2);if weighted[mid]<wanted then lo=mid+1 else hi=mid end end
     if total<=0 then break end
     local u=math.sqrt(math.random());local v=math.random()
-    droplets[#droplets+1]={tri=lo,bary={1-u,u*(1-v),u*v},age=0,life=5+math.random()*8,size=0.0015+math.random()*0.003}
+    droplets[#droplets+1]={tri=lo,bary={1-u,u*(1-v),u*v},age=0,life=10+math.random()*12,size=0.002+math.random()^2*0.005}
     credit=credit-1
   end
-  local part=g.part("beamngWeather_hashk014_glassDrops")
+  local part=g.part(glassMaterial.get(config))
   local remaining,wetPanels={},{}
   for _,drop in ipairs(droplets) do
     drop.age=drop.age+dt
@@ -152,7 +156,7 @@ local function update(config,dt,intensity)
   local pos=vehicle:getPosition()
   local camera=core_camera.getPosition()
   if g.length(g.sub(camera,pos))>40 then
-    state.guardRadius,state.reservedDrops=0,0
+    state.guardRadius,state.reservedDrops,state.airBackend=0,0,"native"
     state.glassDrops,state.nearDrops=0,0;droplets={};exposureTimer=1
     freeMeshes();near.clear();return
   end
@@ -201,11 +205,13 @@ local function update(config,dt,intensity)
   state.wetPanels=wetPanels
   if radius>0 then
     airMesh:setPosition(pos)
-    local part,visible,reserved=near.update(config,step,camera,radius,pos,frame,geometry.bounds,intensity,velocity,wind)
+    local part,visible,reserved=near.update(config,step,camera,math.max(radius,18*config.volume),pos,frame,geometry.bounds,intensity,velocity,wind)
     if #part.faces>0 then airMesh:createMesh({{part}});airMesh:setHidden(false) else airMesh:setHidden(true) end
     state.nearDrops,state.reservedDrops=visible,reserved
   else airMesh:setHidden(true);near.clear();state.nearDrops,state.reservedDrops=0,0 end
   state.guardRadius=radius
+  state.airBackend=radius>0 and "mesh" or "native"
+  state.refraction=config.glassDistortion>0
 end
 function M.update(config,dt,intensity)
   if failureTimer>0 then failureTimer=math.max(0,failureTimer-dt);return end

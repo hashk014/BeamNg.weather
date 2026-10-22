@@ -45,8 +45,9 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); scope.openChoice = null; }
       };
       scope.glassControls = [
-        {key:'glassAmount',label:'Window droplet amount',min:0,max:2,step:0.05,unit:'factor'},
-        {key:'glassScale',label:'Window droplet size',min:0.5,max:2,step:0.05,unit:'factor'}
+        {key:'glassAmount',label:'Window droplet amount',min:0,max:4,step:0.05,unit:'factor'},
+        {key:'glassScale',label:'Window droplet size',min:0.5,max:2,step:0.05,unit:'factor'},
+        {key:'glassDistortion',label:'Refraction strength (0 disables)',min:0,max:2,step:0.05,unit:'factor'}
       ];
       scope.controls = [
         {key: 'intensity', label: 'Intensity', min: 0, max: 1, step: 0.01, unit: 'percent'},

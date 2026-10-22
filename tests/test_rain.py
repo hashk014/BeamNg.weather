@@ -322,6 +322,7 @@ class RainTests(unittest.TestCase):
             assert(math.abs(layer.fadeDist-layer.fadeDistEnd-state.vehicleRain.guardRadius)<0.00001)
           end
           local native=registry.beamngWeather_hashk014_fine.numDrops+registry.beamngWeather_hashk014_body.numDrops+registry.beamngWeather_hashk014_distant.numDrops
+          assert(native==0 and state.vehicleRain.airBackend=="mesh","No native drops may overlap the protected cabin")
           assert(native+state.vehicleRain.reservedDrops==state.activeDrops)
           assert(state.activeDrops<=state.maxDrops)
           extension.onClientEndMission()
@@ -378,6 +379,13 @@ class RainTests(unittest.TestCase):
           assert(math.abs(fine.fadeDist-4*1.6)<0.00001)
           assert(fine.fadeDist<fine.fadeDistEnd)
           assert(extension.getState().vehicleRain.glassDrops>0)
+          assert(fine.numDrops>0 and extension.getState().vehicleRain.airBackend=="native")
+          extension.configure({cabinProtection=true})
+          extension.onUpdate(0.05,0.05)
+          assert(fine.numDrops==0)
+          cameraPosition={x=200,y=200,z=10}
+          extension.onUpdate(0.05,0.05)
+          assert(fine.numDrops>0 and extension.getState().vehicleRain.airBackend=="native")
         ''')
 
     def test_native_cloud_modes_and_restoration(self):

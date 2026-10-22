@@ -36,7 +36,7 @@ function createObject(class)
       assert(self.collisionType=="None", "Visual meshes must not add physical colliders")
       self.mesh=lods[1][1]
       local material=registry[self.mesh.material]
-      assert(material and material:getClassName()=="Material","Mesh material must resolve to a Material")
+      assert(material and (material:getClassName()=="Material" or material:getClassName()=="CustomMaterial"),"Mesh material must resolve to a Material")
       for _,f in ipairs(self.mesh.faces) do
         assert(f.v>=0 and f.v<#self.mesh.verts and f.n>=0 and f.n<#self.mesh.normals and f.u>=0 and f.u<#self.mesh.uvs)
       end

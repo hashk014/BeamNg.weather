@@ -43,11 +43,54 @@ class VehicleRainTests(unittest.TestCase):
           assert(scans==1 and freed==1)
         ''')
 
+    def test_refraction_material_binding_strength_and_explicit_fallback(self):
+        self.run_lua('''
+          advance(30)
+          local lens=registry.beamngWeather_hashk014_glassLens
+          assert(lens:getClassName()=="CustomMaterial" and lens.sampler=="$backbuff")
+          assert(lens.refract=="1" and lens.fallback=="beamngWeather_hashk014_glassDrops")
+          assert(not registry.beamngWeather_hashk014_glassLensState.zWriteEnable)
+          local mesh=registry.beamngWeather_hashk014_glassDropsMesh
+          assert(mesh.mesh.material==lens.name)
+          local reloads=0;lens.reload=function() reloads=reloads+1 end
+          config.glassDistortion=1.8;advance(3)
+          assert(lens.refractionStrength=="1.8" and reloads==1)
+          config.glassDistortion=0;advance(2)
+          assert(mesh.mesh.material=="beamngWeather_hashk014_glassDrops")
+          config.glassDistortion=1;effects.clear();advance(2)
+          assert(registry.beamngWeather_hashk014_glassLens==lens)
+          assert(registry.beamngWeather_hashk014_glassDropsMesh.mesh.material==lens.name)
+        ''')
+
+    def test_dense_glass_population_is_bounded_and_zero_amount_stays_dry(self):
+        self.run_lua('''
+          config.glassAmount=0;advance(30)
+          assert(effects.getState().glassDrops==0)
+          config.glassAmount=4;advance(30)
+          assert(effects.getState().glassDrops>350 and effects.getState().glassDrops<=1200)
+          config.quality="medium";advance(30)
+          assert(effects.getState().glassDrops>1200 and effects.getState().glassDrops<=2400)
+          config.quality="low";advance(2)
+          assert(effects.getState().glassDrops<=1200)
+        ''')
+
+    def test_fast_vehicle_excludes_whole_air_quads_from_seats_and_footwell(self):
+        self.run_lua('''
+          for _,speed in ipairs({-60,0,60}) do
+            effects.clear();vehicle.velocity=g.v(0,speed,0)
+            advance(30)
+            local part=registry.beamngWeather_hashk014_nearDropsMesh.mesh
+            assert(part and #part.verts>0)
+            local cabin={lo=g.v(-1,-1,-0.45),hi=g.v(1,1,2)}
+            for _,v in ipairs(part.verts) do assert(not g.contains(v,cabin)) end
+          end
+        ''')
+
     def test_near_particles_exclude_cabin_and_do_not_change_physics(self):
         self.run_lua('''
           advance(30)
           local state=effects.getState()
-          assert(state.nearDrops>0 and state.reservedDrops<=300)
+          assert(state.nearDrops>0 and state.reservedDrops<=1200)
           local part=registry.beamngWeather_hashk014_nearDropsMesh.mesh
           local box={lo=g.v(-1,-1,0.35),hi=g.v(1,1,2)}
           for i=1,#part.verts,4 do
@@ -189,7 +232,7 @@ class VehicleRainTests(unittest.TestCase):
           noRainBelowRoof()
           roof=false;advance(50)
           assert(effects.getState().glassDrops>0 and effects.getState().nearDrops>0)
-          roof=true;advance(360)
+          roof=true;advance(500)
           assert(effects.getState().glassDrops==0)
           noRainBelowRoof()
         ''')
@@ -276,6 +319,7 @@ class VehicleRainTests(unittest.TestCase):
 
     def test_material_names_survive_mesh_creation_reset_and_cleanup(self):
         self.run_lua('''
+          config.glassDistortion=0
           for cycle=1,3 do
             advance(30)
             local glass=registry.beamngWeather_hashk014_glassDropsMesh

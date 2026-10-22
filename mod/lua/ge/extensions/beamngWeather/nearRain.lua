@@ -1,9 +1,9 @@
--- A bounded, collision-free render mesh fills the native rain's cabin guard.
+-- Bounded airborne renderer used instead of native emitters near the cabin.
 local M = {}
 local g=require("ge/extensions/beamngWeather/surfaceMath")
 local drops,columns={},{}
 local time=0
-local limits={low=300,medium=650,high=1100,ultra=1600}
+local limits={low=1200,medium=2400,high=4000,ultra=6000}
 local function column(x,y,camera,budget)
   local key=math.floor(x)..":"..math.floor(y)
   local saved=columns[key]
@@ -36,10 +36,13 @@ function M.update(config,dt,camera,radius,vehiclePos,frame,bounds,intensity,velo
     swept.lo[k]=bounds.lo[k]+math.min(0,motion[k])-0.25
     swept.hi[k]=bounds.hi[k]+math.max(0,motion[k])+0.25
   end
+  -- Extend below the glass-derived box to include the footwell and seat base.
+  swept.lo.z=math.min(swept.lo.z,bounds.lo.z-0.8)
   for i=1,target do
     local d=drops[i]
     if not d or g.length(g.sub(d.p,camera))>radius+1 then
-      d={p=g.v(camera.x+(math.random()*2-1)*radius,camera.y+(math.random()*2-1)*radius,camera.z+(math.random()*2-1)*radius),speed=7+math.random()*4,tile=math.random(0,15)}
+      local spawnRadius=math.random()<0.75 and math.min(radius,6) or radius
+      d={p=g.v(camera.x+(math.random()*2-1)*spawnRadius,camera.y+(math.random()*2-1)*spawnRadius,camera.z+(math.random()*2-1)*spawnRadius),speed=7+math.random()*4,tile=math.random(0,15)}
       drops[i]=d
     end
     d.p.z=d.p.z-d.speed*config.fallSpeed*dt
