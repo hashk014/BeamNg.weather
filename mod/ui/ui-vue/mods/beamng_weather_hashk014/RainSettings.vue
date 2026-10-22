@@ -56,10 +56,12 @@
         <div class="bw-checks">
           <label><input v-model="form.cabinProtection" type="checkbox" @change="apply('cabinProtection')">Keep airborne rain outside the cabin</label>
           <label><input v-model="form.glassDrops" type="checkbox" @change="apply('glassDrops')">Enable droplets on detected exterior windows</label>
+          <label><input v-model="form.experimentalRefraction" type="checkbox" @change="apply('experimentalRefraction')">Experimental refraction (may render incorrectly)</label>
         </div>
         <div class="bw-sliders"><label v-for="control in glassControls" :key="control.key" class="bw-slider"><span>{{ control.label }}</span><output>{{ format(control) }}</output><input v-model.number="form[control.key]" type="range" :min="control.min" :max="control.max" :step="control.step" :aria-label="control.label" @focus="editingKey = control.key" @blur="editingKey = null" @change="apply(control.key)"></label></div>
         <p class="bw-hint">{{ state.vehicleRain?.panels || 0 }} detected window meshes / {{ state.vehicleRain?.glassDrops || 0 }} surface droplets. Movement follows vehicle velocity. Escape pauses the simulation.</p>
-        <p class="bw-hint">Cabin protection uses a conservative envelope near the active vehicle. Disable it for open-top vehicles. Glass damage and moving windows are experimental.</p>
+        <p class="bw-hint">Window rendering: {{ state.vehicleRain?.refraction ? 'Experimental refraction' : 'Classic beads' }}. Cabin protection: {{ state.vehicleRain?.airBackend === 'mesh' ? 'Active' : 'Inactive' }}.</p>
+        <p class="bw-hint">Classic beads are the default. Cabin protection uses a conservative area around the active vehicle. Disable it for open-top vehicles. Glass damage and moving windows are experimental.</p>
         <p v-if="state.vehicleRain?.warning" class="bw-error" role="status">{{ state.vehicleRain.warning }}</p>
       </section>
       <section class="bw-section" aria-label="Custom presets">
@@ -120,7 +122,7 @@ export default {
       state.value = data
       error.value = ""
       for (const control of [...controls, ...glassControls]) if (editingKey.value !== control.key) form[control.key] = data[control.key]
-      for (const key of ["quality", "collisions", "wind", "lighting", "cloudMode", "cloudCoverage", "glassDrops", "cabinProtection"]) if (editingKey.value !== key) form[key] = data[key]
+      for (const key of ["quality", "collisions", "wind", "lighting", "cloudMode", "cloudCoverage", "glassDrops", "cabinProtection", "experimentalRefraction"]) if (editingKey.value !== key) form[key] = data[key]
     }
     async function request(method, value = null) {
       let timer
@@ -158,7 +160,7 @@ export default {
       if (key === "quality" && ["low", "medium", "high", "ultra"].includes(form.quality)) return send("configure", { quality: form.quality })
       if (key === "cloudMode" && ["auto", "manual", "map"].includes(form.cloudMode)) return send("configure", { cloudMode: form.cloudMode })
       if (key === "cloudCoverage" && Number.isFinite(Number(form.cloudCoverage))) return send("configure", { cloudCoverage: Math.max(0, Math.min(1, Number(form.cloudCoverage))) })
-      if (["collisions", "wind", "lighting", "glassDrops", "cabinProtection"].includes(key)) return send("configure", { [key]: !!form[key] })
+      if (["collisions", "wind", "lighting", "glassDrops", "cabinProtection", "experimentalRefraction"].includes(key)) return send("configure", { [key]: !!form[key] })
     }
     function toggle() { if (state.value) return send("setEnabled", !state.value.enabled) }
     function selectPreset(id) { if (state.value?.presets?.some(p => p.id === id)) return send("applyPreset", id) }

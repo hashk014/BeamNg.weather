@@ -43,8 +43,10 @@
       <h2>Vehicle windows</h2>
       <label class="bweather-check"><input type="checkbox" ng-model="form.cabinProtection" ng-change="apply('cabinProtection')">Keep rain outside the cabin</label>
       <label class="bweather-check"><input type="checkbox" ng-model="form.glassDrops" ng-change="apply('glassDrops')">Droplets on exterior windows</label>
+      <label class="bweather-check"><input type="checkbox" ng-model="form.experimentalRefraction" ng-change="apply('experimentalRefraction')">Experimental refraction (may render incorrectly)</label>
       <label class="bweather-slider" ng-repeat="c in glassControls"><span>{{c.label}}</span><output>{{format(c)}}</output><input type="range" beamng-weather-range min="{{c.min}}" max="{{c.max}}" step="{{c.step}}" ng-model="form[c.key]" ng-focus="edit.key = c.key" ng-blur="endEdit()" ng-change="apply(c.key)" aria-label="{{c.label}}"></label>
       <p class="bweather-hint">{{weather.vehicleRain.panels || 0}} window meshes / {{weather.vehicleRain.glassDrops || 0}} droplets. Escape pauses the simulation. Disable cabin protection for open-top vehicles.</p>
+      <p class="bweather-hint">Window rendering: {{weather.vehicleRain.refraction ? 'Experimental refraction' : 'Classic beads'}}. Cabin protection: {{weather.vehicleRain.airBackend === 'mesh' ? 'Active' : 'Inactive'}}.</p>
       <p class="bweather-error" ng-if="weather.vehicleRain.warning">{{weather.vehicleRain.warning}}</p>
     </section>
     <section class="bweather-section bweather-personal" aria-label="Custom presets">

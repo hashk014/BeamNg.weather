@@ -47,7 +47,7 @@ local function refractive(config)
   return prefix.."glassLens"
 end
 function M.get(config)
-  if config.glassDistortion<=0 then
+  if not config.experimentalRefraction or config.glassDistortion<=0 then
     failedStrength,failureWarning=nil,nil
     return prefix.."glassDrops"
   end

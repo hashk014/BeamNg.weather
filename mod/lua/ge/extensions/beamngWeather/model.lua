@@ -1,6 +1,6 @@
 -- Visual settings only; this module never changes vehicle or world physics.
 local M = {}
-M.version = "0.6.1"
+M.version = "0.6.2"
 -- BeamNG 0.40's native environment panel uses 0..3, not 0..1.
 M.cloudCoverageMax = 3
 M.budgets = {low = 2400, medium = 6000, high = 12000, ultra = 20000}
@@ -10,8 +10,8 @@ M.ranges = {
   volume = {0.65, 1.6, 1}, contrast = {0.35, 1.5, 0.9}, transition = {0, 5, 1.5},
   cloudCoverage = {0, 1, 0.85}, glassAmount = {0, 4, 1}, glassScale = {0.5, 2, 1.25}, glassDistortion = {0, 2, 1}
 }
-local booleans = {enabled = true, collisions = true, wind = true, lighting = true, cabinProtection = true, glassDrops = true}
-local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting", "cloudMode", "cloudCoverage", "glassAmount", "glassScale", "glassDistortion", "glassDrops", "cabinProtection"}
+local booleans = {enabled = true, collisions = true, wind = true, lighting = true, cabinProtection = true, glassDrops = true, experimentalRefraction = false}
+local profileFields = {"intensity", "dropScale", "fallSpeed", "turbulence", "variability", "volume", "contrast", "wind", "lighting", "cloudMode", "cloudCoverage", "glassAmount", "glassScale", "glassDistortion", "glassDrops", "cabinProtection", "experimentalRefraction"}
 M.presets = {
   {id = "drizzle", name = "Drizzle", description = "Fine droplets with a gentle fall", intensity = 0.26, dropScale = 0.65, fallSpeed = 0.65, turbulence = 0.08, variability = 0.09, contrast = 0.65, volume = 0.85, wind = true, lighting = true},
   {id = "gentle", name = "Light rain", description = "Steady, subtle rainfall", intensity = 0.46, dropScale = 0.85, fallSpeed = 0.85, turbulence = 0.08, variability = 0.12, contrast = 0.8, volume = 1, wind = true, lighting = true},

@@ -104,6 +104,7 @@ const ui = context.component.setup();
   ui.form.glassDistortion=0; await ui.apply('glassDistortion'); assert.equal(calls.pop().value.glassDistortion,0);
   ui.form.glassScale=-2; await ui.apply('glassScale'); assert.equal(calls.pop().value.glassScale,0.5);
   ui.form.glassDrops=false; await ui.apply('glassDrops'); assert.equal(calls.pop().value.glassDrops,false);
+  ui.form.experimentalRefraction=true; await ui.apply('experimentalRefraction'); assert.equal(calls.pop().value.experimentalRefraction,true);
   ui.form.cabinProtection=false; await ui.apply('cabinProtection'); assert.equal(calls.pop().value.cabinProtection,false);
   fail=true; await ui.refresh(); assert.match(ui.error.value, /offline/);
   await ui.toggle(); assert.match(ui.error.value, /offline/);

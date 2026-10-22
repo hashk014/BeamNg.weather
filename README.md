@@ -4,10 +4,11 @@
 original textures featuring 16 droplet variants per layer, five built-in presets
 and three saved custom presets. Rain starts automatically after a map loads.
 
-Version **0.6.1** fixes a material enum assignment that aborted vehicle rain in
-0.6.0 with `number expected, got string`. A refraction setup failure now falls
-back to normal-mapped beads while keeping cabin protection active.
-It retains experimental scene-color refraction, denser accumulation and adjustable distortion. Near a protected vehicle,
+Version **0.6.2** restores classic window beads by default after a DirectX 12
+sampler-binding failure in the experimental refraction renderer. It reduces
+particle caps and mesh upload rates, and uses a wider cabin exclusion that
+remains conservative through turns. Refraction is now an explicit experiment.
+Near a protected vehicle,
 the mod disables its native precipitation emitters and uses a bounded airborne
 mesh that excludes the cabin, including the footwell and a margin for motion.
 The classic gray/orange interface stays in English. Open the settings at:
@@ -20,7 +21,7 @@ engine. Automated tests cover logic and packaging, not in-game rendering.
 
 ## Download and install
 
-1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.6.1-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
+1. Download **[beamng_weather_hashk014.zip](https://github.com/hashk014/BeamNg.weather/releases/download/v0.6.2-alpha.1/beamng_weather_hashk014.zip)** from [Releases](https://github.com/hashk014/BeamNg.weather/releases).
 2. In the BeamNG launcher, select **Manage User Folder**, then open the active user folder.
 3. Put the ZIP in its `mods` subfolder **without extracting it**. Create the
    subfolder if needed. When updating, replace the old ZIP with the same name.
@@ -108,7 +109,10 @@ Start with a closed-roof car and allow a few seconds for scanning and accumulati
 **Escape pauses the simulation**, including falling and sliding droplets.
 
 - **Keep airborne rain outside the cabin:** derive a conservative cabin envelope
-  from detected glass. All three of this mod's native emitters are disabled while
+  from detected glass. A wider rounded envelope encloses every orientation of
+  the cabin and its footwell, extended along the expected movement path. A stale
+  air mesh is hidden if the vehicle moves outside that protected path.
+  All three of this mod's native emitters are disabled while
   a replacement mesh renders airborne rain outside that envelope. The protection
   no longer depends on the precipitation shader receiving a fade-mask constant.
   No physical collider or vehicle-physics modification is added.
@@ -119,7 +123,12 @@ Start with a closed-roof car and allow a few seconds for scanning and accumulati
   triangles and follow the vehicle pose. There is no screen-wide rain overlay.
 - **Window droplet amount:** scales arrival from 0 to 4 times the denser base amount.
   **Window droplet size:** 0.5 to 2 times the base size; new settings default to 1.25.
-- **Refraction strength (0 disables):** distort the sampled scene image inside
+- **Experimental refraction:** off by default, including when upgrading from
+  0.6.0/0.6.1. Classic normal-mapped beads remain the default visible material.
+  Only enable this checkbox to test the revised shader; its native sampler
+  binding has been revised but its rendered output still needs validation.
+- **Refraction strength (0 disables):** with the experimental checkbox enabled,
+  distort the sampled scene image inside
   each bead, with a curved lens profile and a subtle rim/highlight. Range 0 to 2;
   default 1. Set it to 0 to use the previous normal-mapped material if the new
   shader is incompatible with your renderer. Existing saved sizes are preserved.
@@ -140,14 +149,15 @@ Geometry is scanned again after a vehicle reset/switch; severe damage can leave
 stale glass positions until reset. Refraction samples the rendered scene, so it
 cannot reconstruct hidden objects or multiple optical layers. Wipers are absent.
 
-Surface droplets are capped at 1,200 / 2,400 / 4,000 / 6,000 for Low / Balanced /
-High / Ultra. The airborne mesh has the same caps, within the airborne budget.
+Surface droplets are capped at 600 / 1,000 / 1,600 / 2,200 for Low / Balanced /
+High / Ultra. The airborne mesh caps are 600 / 900 / 1,400 / 2,000.
 It covers a radius of approximately 18 m times Volume around the camera, with
 most drops concentrated within 6 m. Distant native rain returns when protection
 is disabled or the camera leaves its supported range. Map-owned precipitation
 and other mods remain untouched and may still enter the cabin.
-Mesh geometry refreshes at up to
-30 Hz; the glass transform follows the vehicle between refreshes. FPS and native
+Glass geometry refreshes at up to 10 Hz and airborne geometry at 20 Hz;
+the glass transform follows the vehicle every graphics frame. The wider exclusion
+can remove some rain outside the car. FPS and native
 mesh bindings still need in-game validation. See [validation](docs/VALIDATION.md).
 
 ### Available settings

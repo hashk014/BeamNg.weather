@@ -341,7 +341,7 @@ class RainTests(unittest.TestCase):
             if class=="CustomMaterial" then error("injected unsupported material") end
             return create(class)
           end
-          extension.configure({quality="low",intensity=1,transition=0,variability=0})
+          extension.configure({quality="low",intensity=1,transition=0,variability=0,experimentalRefraction=true})
           for i=1,30 do extension.onUpdate(0.05,0.05) end
           local state=extension.getState().vehicleRain
           assert(state.available and state.glassDrops>0 and state.airBackend=="mesh")

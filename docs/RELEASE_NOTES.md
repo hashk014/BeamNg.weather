@@ -1,14 +1,15 @@
-# BeamNg.weather 0.6.1 alpha 1
+# BeamNg.weather 0.6.2 alpha 1
 
-Fix the Lua error that removed window droplets and disabled cabin protection in 0.6.0.
+Reduce vehicle-rain overhead, restore classic window beads by default, and strengthen cabin exclusion while turning.
 
-- Set the CustomMaterial blend mode through `setField("translucentBlendOp", 0, "LerpAlpha")`, matching the installed game's material setup. Direct assignment passed a string to a native enum setter expecting a number.
-- If Lua refraction-material setup fails, keep normal-mapped beads and cabin protection active. Display a specific warning, clean up failed material objects and retry when the refraction strength changes. Avoid repeated rescans and setup attempts every frame.
-- Include a traceback for other fatal vehicle-renderer errors, making further runtime failures easier to locate.
-- Preserve the denser accumulation, adjustable refraction and exclusive airborne renderer introduced in 0.6.0. No new physics changes.
+- Default to the classic PBR bead material, including for old settings with Refraction strength 1. The new **Experimental refraction** checkbox is off by default. The GUI reports the selected window renderer and whether cabin protection is active.
+- Address the logged DirectX 12 null sampler-table failure in the experimental shader by using the engine's scene-space render-target sampler. Compilation and reflection pass; the revised shader remains opt-in until its actual rendering is confirmed.
+- Limit glass geometry uploads to 10 Hz and airborne uploads to 20 Hz. Vehicle pose tracking still runs each frame. Cache panel exposure centers instead of rebuilding them repeatedly.
+- Lower glass caps to 600 / 1,000 / 1,600 / 2,200 and air caps to 600 / 900 / 1,400 / 2,000 for Low / Balanced / High / Ultra. Amount and size controls remain available.
+- Use a wider rounded cabin envelope covering all orientations, the footwell, particle corners and expected movement. Hide a stale air mesh after an unpredicted movement until the next scheduled rebuild. This can remove some rain just outside the car.
 
-**Install:** fully close BeamNG, replace the previous ZIP, keep one installed copy, and restart. Use a closed-roof vehicle. In Vehicle windows, check that detected meshes and surface droplets stay above zero. Close Escape and check the windshield, seats and footwell. If the new refraction shader renders incorrectly, set Refraction strength to 0; this keeps the normal-mapped beads and cabin protection.
+**Install:** fully close BeamNG, replace the old ZIP, keep one installed copy and restart. Enable rain and leave Experimental refraction unchecked for the first test. Start with Low or Balanced. Vehicle windows should report Classic beads and Cabin protection: Active near a supported closed-roof vehicle. Close Escape to test motion, then check the windshield, seats and footwell while turning.
 
-**Validation:** 51 local Python/LuaJIT tests and both Node UI checks pass. A stricter native-enum boundary reproduces the old assignment failure. New tests inject refraction setup errors and verify that beads and cabin protection survive, native emitters remain at zero, and changing strength can recover. The ZIP is reproducible and matches the source. CI runs 50 portable tests, skipping the installed-game integration.
+**Validation:** 54 local Python/LuaJIT tests and both UI tests pass. Checks cover default material selection, opt-in switching, upload limits at 120 graphics updates per second, pause, rotated cabin exclusion and stale-mesh hiding. All six offline shader stage/permutation compilations pass. ZIP/source integrity is verified. CI runs 53 portable tests and skips the installed-game integration.
 
-**Runtime limit:** the user's log confirms successful glass detection followed by the native binding error in 0.6.0. This patch fixes that incompatible call, but the new in-game appearance and cabin exclusion still need a retest. GPU failures that do not raise a Lua error are not automatically detected.
+The synthetic 10-second Low workload fell from 2.642 s to 0.313 s on the same machine; Balanced fell from 8.177 s to 0.855 s. These timings exclude the native renderer and are **not in-game FPS measurements**. See docs/VALIDATION.md for the procedure and limits. Actual appearance, performance and cabin exclusion still require gameplay validation. No puddles, wipers or friction changes.

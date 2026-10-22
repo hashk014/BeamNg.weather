@@ -12,7 +12,7 @@ MaterialUniforms getMaterialData() { return (MaterialUniforms)0; }
 #include "shaders/common/material/shadergen/materialDrawId.h.hlsl"
 
 Texture2D sceneColor : REGISTER(t0, materialSpace);
-SamplerState sceneColorSampler : REGISTER(s0, materialSpace);
+// Shadergen binds render-target samplers in sceneSpace, not materialSpace.
 cbuffer cspMaterial : REGISTER(b4, materialSpace) { float refractionStrength; };
 
 struct BeadPixel {
@@ -52,7 +52,7 @@ float4 mainP(BeadPixel p) : SV_Target0 {
     pixels = clamp(pixels, -32.0, 32.0);
     // Screen UV derivatives also work when the refraction buffer is downscaled.
     float2 offset = ddx(screen) * pixels.x + ddy(screen) * pixels.y;
-    float3 refracted = sceneColor.Sample(sceneColorSampler, saturate(screen + offset)).rgb;
+    float3 refracted = sceneColor.Sample(defaultSamplerRT, saturate(screen + offset)).rgb;
     float rim = pow(saturate(r2), 5.0);
     float highlight = exp(-dot(lens + float2(0.32, 0.38), lens + float2(0.32, 0.38)) * 90.0);
     float age = floor(p.atlas.x * 4.0) + floor(p.atlas.y * 4.0) * 4.0;

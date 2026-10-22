@@ -8,7 +8,8 @@ local glassMesh,airMesh,group
 local glassOrientation
 local droplets={}
 local state={available=false,glassDrops=0,nearDrops=0,guardRadius=0,reservedDrops=0}
-local scanTimer,tick,exposureTimer,credit=0,0,0,0
+local glassTick,airTick,exposureTimer,credit=0,0,0,0
+local lastGlassConfig,lastAirConfig,materialWarning
 local retryDelay=0
 local failureTimer=0
 local lastFailure
@@ -17,12 +18,14 @@ local function freeMeshes()
   if live(group) then group:delete() end
   group,glassMesh,airMesh=nil,nil,nil
   glassOrientation=nil
+  lastGlassConfig,lastAirConfig=nil,nil
 end
 function M.clear()
   freeMeshes();near.clear()
   if adapter then adapter.cancel() end
   geometry,vehicleID,vehicleData=nil,nil,nil
-  droplets={};scanTimer,tick,exposureTimer,credit,retryDelay=0,0,0,0,0
+  droplets={};glassTick,airTick,exposureTimer,credit,retryDelay=0,0,0,0,0
+  lastGlassConfig,lastAirConfig,materialWarning=nil,nil,nil
   state={available=false,glassDrops=0,nearDrops=0,guardRadius=0,reservedDrops=0}
 end
 function M.invalidate(id) if not id or id==vehicleID then M.clear() end end
@@ -64,6 +67,13 @@ local function prepare(data)
       if found then t.neighbors[e]=found[1];data.triangles[found[1]].neighbors[found[2]]=i else edges[key]={i,e} end
     end
   end
+  for _,panel in ipairs(data.panels) do
+    local mid=g.v()
+    for _,index in ipairs(panel.triangles) do
+      local t=data.triangles[index];mid=g.add(mid,g.mul(g.add(g.add(t.a,t.b),t.c),1/3))
+    end
+    panel.mid=g.mul(mid,1/#panel.triangles)
+  end
   geometry=data
 end
 local function walk(drop,delta)
@@ -86,10 +96,7 @@ local function sheltered(world,incoming)
 end
 local function updateExposure(pos,frame,incoming)
   for _,panel in ipairs(geometry.panels) do
-    local mid=g.v()
-    for _,index in ipairs(panel.triangles) do local t=geometry.triangles[index];mid=g.add(mid,g.mul(g.add(g.add(t.a,t.b),t.c),1/3)) end
-    mid=g.mul(mid,1/#panel.triangles)
-    panel.exposed=not sheltered(g.add(pos,g.worldVector(mid,frame)),incoming)
+    panel.exposed=not sheltered(g.add(pos,g.worldVector(panel.mid,frame)),incoming)
   end
 end
 local function glass(config,dt,pos,frame,incoming,intensity)
@@ -100,7 +107,7 @@ local function glass(config,dt,pos,frame,incoming,intensity)
     local weight=geometry.panels[t.panel].exposed and t.area*(0.12+g.flux(t.n,relative)/9) or 0
     total=total+weight;weighted[i]=total
   end
-  local cap=({low=1200,medium=2400,high=4000,ultra=6000})[config.quality]
+  local cap=({low=600,medium=1000,high=1600,ultra=2200})[config.quality]
   credit=math.min(180,credit+total*450*intensity*config.glassAmount*dt)
   if #droplets==0 and total>0 and config.glassAmount>0 then
     credit=credit+math.min(300,cap*0.2)*math.min(1,intensity*config.glassAmount)
@@ -114,7 +121,8 @@ local function glass(config,dt,pos,frame,incoming,intensity)
     droplets[#droplets+1]={tri=lo,bary={1-u,u*(1-v),u*v},age=0,life=10+math.random()*12,size=0.002+math.random()^2*0.005}
     credit=credit-1
   end
-  local material,materialWarning=glassMaterial.get(config)
+  local material
+  material,materialWarning=glassMaterial.get(config)
   state.refraction=material=="beamngWeather_hashk014_glassLens"
   if materialWarning then state.warning=materialWarning end
   local part=g.part(material)
@@ -194,27 +202,39 @@ local function update(config,dt,intensity)
   else glassMesh:setPosition(pos) end
   exposureTimer=exposureTimer+dt
   if exposureTimer>=0.35 then updateExposure(pos,frame,incoming);exposureTimer=0 end
-  tick=tick+dt
-  if tick<1/30 then return end
-  local step=math.min(0.08,tick);tick=0
-  local glassPart,count,wetPanels
-  if config.glassDrops then glassPart,count,wetPanels=glass(config,step,pos,frame,incoming,intensity) else droplets={};glassPart,count=g.part("beamngWeather_hashk014_glassDrops"),0 end
-  if #glassPart.faces>0 then
-    glassMesh:createMesh({{glassPart}});glassMesh:setHidden(false)
-    glassOrientation=quat(vehicle:getRefNodeRotation())
-    glassMesh:setPosRot(pos.x,pos.y,pos.z,0,0,0,1)
-  else glassMesh:setHidden(true) end
-  state.glassDrops=count
-  state.wetPanels=wetPanels
+  glassTick,airTick=glassTick+dt,airTick+dt
+  local glassConfig=table.concat({tostring(config.glassDrops),config.quality,config.glassAmount,config.glassScale,
+    config.glassDistortion,tostring(config.experimentalRefraction)},":")
+  -- Glass moves with the vehicle every frame; only its changing shape is uploaded at 10 Hz.
+  if glassTick>=0.1-1e-8 or lastGlassConfig~=glassConfig then
+    local step=math.min(0.2,glassTick);glassTick=0;lastGlassConfig=glassConfig
+    local part,count,wetPanels
+    if config.glassDrops then part,count,wetPanels=glass(config,step,pos,frame,incoming,intensity)
+    else droplets={};part,count=g.part("beamngWeather_hashk014_glassDrops"),0;materialWarning=nil;state.refraction=false end
+    if #part.faces>0 then
+      glassMesh:createMesh({{part}});glassMesh:setHidden(false)
+      glassOrientation=quat(vehicle:getRefNodeRotation())
+      glassMesh:setPosRot(pos.x,pos.y,pos.z,0,0,0,1)
+    else glassMesh:setHidden(true) end
+    state.glassDrops,state.wetPanels=count,wetPanels
+  end
+  if materialWarning then state.warning=materialWarning end
+  local airConfig=table.concat({config.quality,config.volume,config.dropScale,tostring(radius>0)},":")
   if radius>0 then
-    airMesh:setPosition(pos)
-    local part,visible,reserved=near.update(config,step,camera,math.max(radius,18*config.volume),pos,frame,geometry.bounds,intensity,velocity,wind)
-    if #part.faces>0 then airMesh:createMesh({{part}});airMesh:setHidden(false) else airMesh:setHidden(true) end
-    state.nearDrops,state.reservedDrops=visible,reserved
-  else airMesh:setHidden(true);near.clear();state.nearDrops,state.reservedDrops=0,0 end
+    if airTick>=0.05-1e-8 or lastAirConfig~=airConfig then
+      local step=math.min(0.2,airTick);airTick=0;lastAirConfig=airConfig
+      airMesh:setPosition(pos)
+      local part,visible,reserved=near.update(config,step,camera,math.max(radius,18*config.volume),pos,frame,geometry.bounds,intensity,velocity,wind)
+      if #part.faces>0 then airMesh:createMesh({{part}});airMesh:setHidden(false) else airMesh:setHidden(true) end
+      state.nearDrops,state.reservedDrops=visible,reserved
+    elseif not near.isSafe(pos) then
+      -- Never display a stale air mesh after an unpredicted movement/teleport.
+      -- Wait for the scheduled upload instead of rebuilding on every graphics frame.
+      airMesh:setHidden(true)
+    end
+  else airMesh:setHidden(true);near.clear();state.nearDrops,state.reservedDrops=0,0;lastAirConfig=nil end
   state.guardRadius=radius
   state.airBackend=radius>0 and "mesh" or "native"
-  if not config.glassDrops then state.refraction=false end
 end
 function M.update(config,dt,intensity)
   if failureTimer>0 then failureTimer=math.max(0,failureTimer-dt);return end

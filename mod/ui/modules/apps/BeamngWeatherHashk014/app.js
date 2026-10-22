@@ -20,7 +20,7 @@ angular.module('beamng.apps').directive('beamngWeatherHashk014', function () {
       var prefix = 'extensions.beamngWeather_hashk014';
       var labels = {waiting: 'Load a map to see the rain.', raining: 'Raining', stopped: 'Rain stopped', unavailable: 'Rain unavailable: see the diagnostic below.'};
       var qualityNames = ['low', 'medium', 'high', 'ultra'];
-      var booleanFields = ['collisions', 'wind', 'lighting', 'glassDrops', 'cabinProtection'];
+      var booleanFields = ['collisions', 'wind', 'lighting', 'glassDrops', 'cabinProtection', 'experimentalRefraction'];
       scope.weather = null;
       scope.form = {};
       scope.edit = {key: null};

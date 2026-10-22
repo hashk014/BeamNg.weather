@@ -45,6 +45,7 @@ class VehicleRainTests(unittest.TestCase):
 
     def test_refraction_material_binding_strength_and_explicit_fallback(self):
         self.run_lua('''
+          config.experimentalRefraction=true
           advance(30)
           local lens=registry.beamngWeather_hashk014_glassLens
           assert(lens:getClassName()=="CustomMaterial" and lens.sampler=="$backbuff")
@@ -67,15 +68,69 @@ class VehicleRainTests(unittest.TestCase):
           config.glassAmount=0;advance(30)
           assert(effects.getState().glassDrops==0)
           config.glassAmount=4;advance(30)
-          assert(effects.getState().glassDrops>350 and effects.getState().glassDrops<=1200)
+          assert(effects.getState().glassDrops>350 and effects.getState().glassDrops<=600)
           config.quality="medium";advance(30)
-          assert(effects.getState().glassDrops>1200 and effects.getState().glassDrops<=2400)
+          assert(effects.getState().glassDrops>600 and effects.getState().glassDrops<=1000)
           config.quality="low";advance(2)
-          assert(effects.getState().glassDrops<=1200)
+          assert(effects.getState().glassDrops<=600)
+        ''')
+
+    def test_classic_default_does_not_create_the_experimental_shader(self):
+        self.run_lua('''
+          assert(not config.experimentalRefraction and config.glassDistortion==1)
+          advance(30)
+          assert(effects.getState().glassDrops>0 and not effects.getState().refraction)
+          assert(not registry.beamngWeather_hashk014_glassLensShader)
+          assert(registry.beamngWeather_hashk014_glassDropsMesh.mesh.material=="beamngWeather_hashk014_glassDrops")
+          config.experimentalRefraction=true;advance(1)
+          assert(effects.getState().refraction)
+          config.experimentalRefraction=false;advance(1)
+          assert(not effects.getState().refraction and effects.getState().glassDrops>0)
+        ''')
+
+    def test_mesh_upload_rates_and_pause_are_bounded_at_high_graphics_fps(self):
+        self.run_lua('''
+          advance(30)
+          local glass=registry.beamngWeather_hashk014_glassDropsMesh
+          local air=registry.beamngWeather_hashk014_nearDropsMesh
+          local gb,ab=glass.builds,air.builds
+          for i=1,1200 do effects.update(config,1/120,1) end
+          assert(glass.builds-gb<=101 and air.builds-ab<=201)
+          assert(glass.builds-gb>=99 and air.builds-ab>=199)
+          gb,ab=glass.builds,air.builds
+          for i=1,120 do effects.update(config,0,1) end
+          assert(glass.builds==gb and air.builds==ab)
+        ''')
+
+    def test_rotating_cabin_and_unpredicted_motion_never_keep_unsafe_air_mesh(self):
+        self.run_lua('''
+          vehicle.velocity=g.v(0,30,0);advance(30)
+          local near=require("ge/extensions/beamngWeather/nearRain")
+          local air=registry.beamngWeather_hashk014_nearDropsMesh
+          local origin=g.v(vehicle.pos.x,vehicle.pos.y,vehicle.pos.z)
+          local part=air.mesh
+          for _,angle in ipairs({0,0.6,1.5,3.14}) do
+            local frame=g.frame(g.v(math.sin(angle),math.cos(angle),0),g.v(0,0,1))
+            for _,travel in ipairs({0,1,3,4.5}) do
+              local pos=g.add(origin,g.v(0,travel,0))
+              assert(near.isSafe(pos))
+              for _,v in ipairs(part.verts) do
+                local p=g.localVector(g.sub(g.add(origin,v),pos),frame)
+                assert(not g.contains(p,{lo=g.v(-1,-1,-0.45),hi=g.v(1,1,2)}))
+              end
+            end
+          end
+          local builds=air.builds
+          vehicle.pos=g.add(origin,g.v(3,0,0));cameraPosition=g.add(vehicle.pos,g.v(0,0,1.5))
+          effects.update(config,0.001,1)
+          assert(air.hidden and air.builds==builds and not near.isSafe(vehicle.pos))
+          advance(2)
+          assert(not air.hidden and near.isSafe(vehicle.pos))
         ''')
 
     def test_material_setup_failure_keeps_beads_and_cabin_and_can_retry(self):
         self.run_lua('''
+          config.experimentalRefraction=true
           local create=createObject
           local attempts,broken=0,nil
           createObject=function(class)
@@ -116,7 +171,7 @@ class VehicleRainTests(unittest.TestCase):
         self.run_lua('''
           advance(30)
           local state=effects.getState()
-          assert(state.nearDrops>0 and state.reservedDrops<=1200)
+          assert(state.nearDrops>0 and state.reservedDrops<=600)
           local part=registry.beamngWeather_hashk014_nearDropsMesh.mesh
           local box={lo=g.v(-1,-1,0.35),hi=g.v(1,1,2)}
           for i=1,#part.verts,4 do

@@ -1,6 +1,23 @@
-# Validation: 0.6.1 experimental release
+# Validation: 0.6.2 experimental release
 
 Date: October 22, 2026. Target: BeamNG.drive 0.40.x; installed reference: 0.40.1.0.
+
+## 0.6.2 runtime sampler failure and lower upload cost
+
+The user reports severe lag, absent window droplets and a few remaining cabin drops. The 0.6.1 log detects 10 glass meshes / 452 triangles successfully, then repeatedly reports `sampler root descriptor table had null gpu handle` for glassRefraction.hlsl, set 2 / root index 5. There is no repeat of the prior Lua enum error. This proves a native sampler-binding failure, not a missing glass scan.
+
+Classic PBR beads are now the default, also for older saved settings. Refraction requires the new experimental checkbox. The revised shader uses the installed shadergen `defaultSamplerRT` at s2/space1 instead of declaring a material-space sampler; DXC reflection confirms that there is no material-space sampler in the compiled pixel stage. Both stages compile offline for SM5, SM6 and SM6.6 bindless. This removes the declaration corresponding to the reported missing sampler table; native back-buffer binding and appearance remain unverified.
+
+Glass/air caps are now 600/600 on Low and 1,000/900 on Balanced. Geometry uploads are limited to 10 Hz for glass and 20 Hz for air, independently of graphics FPS. Glass pose transforms still follow each frame; panel exposure centers are cached once per scan. Tests verify the upload bounds at 120 graphics updates per second, no uploads while paused, classic rendering by default and opt-in switching. Additional geometry checks rotate the cabin through a full turn along the protected movement segment. Unexpected movement hides the old air mesh until its next scheduled rebuild. The rounded exclusion contains all cabin orientations and particle corners, at the cost of removing some nearby exterior rain.
+
+Local synthetic timing, same machine, Python 3.12 / LuaJIT, 80 warm-up updates then 600 updates at 1/60 s (10 simulated seconds):
+
+| Quality | 0.6.1 elapsed seconds | 0.6.2 elapsed seconds | Glass uploads before/after | Air uploads before/after |
+| --- | ---: | ---: | ---: | ---: |
+| Low | 2.642 | 0.313 | 300 / 100 | 300 / 200 |
+| Balanced | 8.177 | 0.855 | 300 / 100 | 300 / 200 |
+
+These are single-run wall-clock timings of Lua logic, mesh-table construction and the validating mock upload boundary. They exclude native mesh allocation, drivers and GPU work. They demonstrate less synthetic work, **not an in-game FPS multiplier**. Real performance, window appearance and remaining cabin leakage need the user's retest.
 
 ## 0.6.1 native enum assignment and failure isolation
 
@@ -44,11 +61,11 @@ A user screenshot from 0.5.0 shows `Glass scan failed: ... Too many glass triang
 
 ## Evidence and completed checks
 
-- **51 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 50 portable tests and
+- **54 local Python/LuaJIT 2.1 (Lua 5.1) tests.** CI runs 53 portable tests and
   skips the installed-game pause-actions integration. Both Node UI checks pass.
 - Existing lifecycle, presets, cloud restoration, persistence/migration, budget,
   failure recovery, pause registration, texture and deterministic archive checks.
-- Twenty-two synthetic tests exercise the actual vehicle-effect modules using the
+- Twenty-five synthetic tests exercise the actual vehicle-effect modules using the
   native GPU-mesh and ProceduralMesh API shapes: five exterior glass surfaces;
   interior/lamp exclusion; GPU-buffer freeing; forward/reverse impact and sliding;
   exclusion of near drops from the cabin; static shelter; pause; toggles; reset;
@@ -85,8 +102,8 @@ vehicle with a 12 m camera guard. It can remove some air outside the actual cabi
 Turn it off for open-top vehicles. The implementation does not model each opening
 or update flexbody deformation continuously. Damage/opening windows may require
 reset, and unconventional mesh names or combined body meshes may not be supported.
-Window water uses screen-space refraction, with a normal-mapped fallback at zero
-strength. It is not an optical ray tracer. Wipers are not implemented.
+Window water uses normal-mapped beads by default; screen-space refraction is
+experimental and opt-in. It is not an optical ray tracer. Wipers are not implemented.
 New arrivals stop under static shelter, while existing beads
 run off. Collision sampling and exposure are approximate and map-dependent.
 
